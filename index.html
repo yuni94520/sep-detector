@@ -1,0 +1,1798 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEP 必要性檢測工具</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2236;
+    --surface3: #1f2d45;
+    --border: rgba(99,179,237,0.15);
+    --border-strong: rgba(99,179,237,0.35);
+    --accent: #63b3ed;
+    --accent2: #4fd1c5;
+    --accent3: #f6ad55;
+    --text: #e2e8f0;
+    --text-muted: #718096;
+    --text-dim: #4a5568;
+    --red: #fc8181;
+    --yellow: #f6ad55;
+    --green: #68d391;
+    --high: #fc8181;
+    --mid: #f6ad55;
+    --low: #68d391;
+    --font: 'JetBrains Mono', 'Courier New', monospace;
+    --font-ui: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-ui);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    height: 56px;
+    gap: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+  }
+
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    color: #0a0e1a;
+    font-weight: 900;
+  }
+
+  .header-badge {
+    margin-left: auto;
+    background: rgba(99,179,237,0.1);
+    border: 1px solid var(--border-strong);
+    color: var(--accent);
+    font-family: var(--font);
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.05em;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    min-height: calc(100vh - 56px);
+  }
+
+  .left-panel {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .panel-section {
+    border-bottom: 1px solid var(--border);
+    padding: 1.25rem 1.5rem;
+  }
+
+  .section-label {
+    font-family: var(--font);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .upload-zone {
+    border: 1.5px dashed var(--border-strong);
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: rgba(99,179,237,0.03);
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(99,179,237,0.08);
+  }
+
+  .upload-icon {
+    width: 32px; height: 32px;
+    margin: 0 auto 0.75rem;
+    color: var(--accent);
+  }
+
+  .upload-text {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .upload-text strong {
+    color: var(--accent);
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .upload-hint {
+    font-family: var(--font);
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 8px;
+  }
+
+  input[type="file"] { display: none; }
+
+  .chapter-select-wrap { position: relative; }
+
+  select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    padding: 8px 32px 8px 10px;
+    appearance: none;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  select:focus { border-color: var(--accent); }
+  select:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .select-arrow {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+    font-size: 10px;
+  }
+
+  .spec-preview {
+    display: none;
+    margin-top: 0.75rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.75rem;
+    font-family: var(--font);
+    font-size: 11px;
+    color: var(--text-muted);
+    max-height: 140px;
+    overflow-y: auto;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .spec-preview.visible { display: block; }
+
+  .db-stats {
+    display: none;
+    gap: 8px;
+    margin-top: 0.75rem;
+  }
+
+  .db-stats.visible { display: flex; }
+
+  .stat-chip {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    text-align: center;
+  }
+
+  .stat-chip .num {
+    font-family: var(--font);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+    display: block;
+    line-height: 1;
+  }
+
+  .stat-chip .lbl {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .weight-list { display: flex; flex-direction: column; gap: 6px; }
+
+  .weight-row { display: flex; align-items: center; gap: 8px; }
+
+  .weight-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+  .weight-name { font-size: 12px; color: var(--text-muted); width: 60px; flex-shrink: 0; }
+
+  .weight-bar-bg { flex: 1; height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+
+  .weight-bar-fill { height: 100%; border-radius: 2px; background: var(--accent); }
+
+  .weight-pct { font-family: var(--font); font-size: 11px; color: var(--text-dim); width: 32px; text-align: right; }
+
+  .main-panel { display: flex; flex-direction: column; overflow-y: auto; }
+
+  .main-content { flex: 1; padding: 1.75rem 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
+
+  .input-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .input-card-header {
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+  }
+
+  .card-num {
+    width: 22px; height: 22px;
+    background: var(--accent);
+    color: #0a0e1a;
+    border-radius: 50%;
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: 0.02em; }
+
+  .card-subtitle { margin-left: auto; font-family: var(--font); font-size: 10px; color: var(--text-dim); }
+
+  .input-card-body { padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; }
+
+  .field-row { display: flex; gap: 0.75rem; align-items: flex-start; }
+
+  .field-group { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+
+  label { font-size: 11px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.04em; }
+
+  input[type="text"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 12px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus { border-color: var(--accent); }
+
+  textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 11px;
+    padding: 10px;
+    outline: none;
+    resize: vertical;
+    transition: border-color 0.2s;
+    line-height: 1.6;
+  }
+
+  textarea:focus { border-color: var(--accent); }
+
+  .spec-readonly {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    font-family: var(--font);
+    font-size: 11px;
+    color: var(--text-muted);
+    min-height: 80px;
+    max-height: 180px;
+    overflow-y: auto;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .spec-readonly.has-content {
+    color: var(--text);
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .spec-placeholder { color: var(--text-dim); font-size: 12px; text-align: center; }
+
+  .run-area { display: flex; gap: 1rem; align-items: center; }
+
+  .btn-run {
+    flex: 1;
+    background: var(--accent);
+    color: #0a0e1a;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 12px 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-run:hover { background: #90cdf4; }
+  .btn-run:active { transform: scale(0.98); }
+  .btn-run:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-batch {
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-family: var(--font);
+    font-size: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-batch:hover { border-color: var(--accent); color: var(--accent); }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    display: none;
+  }
+
+  .result-card.visible { display: block; }
+
+  .result-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--surface2);
+  }
+
+  .score-badge { font-family: var(--font); font-size: 32px; font-weight: 700; line-height: 1; }
+  .score-badge.high { color: var(--high); }
+  .score-badge.mid { color: var(--mid); }
+  .score-badge.low { color: var(--low); }
+
+  .tier-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+
+  .tier-badge.high { background: rgba(252,129,129,0.15); color: var(--high); border: 1px solid rgba(252,129,129,0.3); }
+  .tier-badge.mid { background: rgba(246,173,85,0.15); color: var(--mid); border: 1px solid rgba(246,173,85,0.3); }
+  .tier-badge.low { background: rgba(104,211,145,0.15); color: var(--low); border: 1px solid rgba(104,211,145,0.3); }
+
+  .result-meta { margin-left: auto; text-align: right; }
+  .result-meta .patent-num { font-family: var(--font); font-size: 12px; color: var(--accent); }
+  .result-meta .chapter-num { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .result-body { padding: 1.25rem; }
+
+  .breakdown-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+
+  .breakdown-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+
+  .breakdown-label { font-size: 10px; color: var(--text-dim); margin-bottom: 4px; }
+  .breakdown-val { font-family: var(--font); font-size: 16px; font-weight: 700; color: var(--text); }
+  .breakdown-val.accent { color: var(--accent); }
+  .breakdown-val.warn { color: var(--yellow); }
+  .breakdown-val.boost { color: var(--accent2); }
+
+  .attr-section-title {
+    font-family: var(--font);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+
+  .attr-rows { display: flex; flex-direction: column; gap: 8px; }
+
+  .attr-row { display: flex; align-items: center; gap: 10px; }
+
+  .attr-name { width: 56px; font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+  .attr-weight { width: 28px; font-family: var(--font); font-size: 10px; color: var(--text-dim); text-align: right; flex-shrink: 0; }
+  .attr-bar-bg { flex: 1; height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+  .attr-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+  .attr-sim { width: 38px; font-family: var(--font); font-size: 11px; text-align: right; flex-shrink: 0; }
+  .attr-contrib { width: 36px; font-family: var(--font); font-size: 10px; color: var(--text-dim); text-align: right; flex-shrink: 0; }
+
+  .penalty-box {
+    margin-top: 1rem;
+    background: rgba(252,129,129,0.08);
+    border: 1px solid rgba(252,129,129,0.25);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    font-size: 12px;
+    color: var(--red);
+    font-family: var(--font);
+    display: none;
+  }
+
+  .penalty-box.visible { display: block; }
+
+  .tier-desc {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .tier-desc.high { background: rgba(252,129,129,0.08); border: 1px solid rgba(252,129,129,0.2); color: var(--high); }
+  .tier-desc.mid { background: rgba(246,173,85,0.08); border: 1px solid rgba(246,173,85,0.2); color: var(--mid); }
+  .tier-desc.low { background: rgba(104,211,145,0.08); border: 1px solid rgba(104,211,145,0.2); color: var(--low); }
+
+  .history-panel { padding: 1.25rem; border-top: 1px solid var(--border); display: none; }
+  .history-panel.visible { display: block; }
+
+  .history-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+
+  .history-title { font-family: var(--font); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--text-muted); text-transform: uppercase; }
+
+  .btn-clear {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-size: 11px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-clear:hover { border-color: var(--red); color: var(--red); }
+
+  .history-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+  .history-table th {
+    font-family: var(--font);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    text-align: left;
+    padding: 0 8px 6px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .history-table td {
+    padding: 6px 8px 6px 0;
+    border-bottom: 1px solid rgba(99,179,237,0.06);
+    color: var(--text-muted);
+    font-family: var(--font);
+    font-size: 11px;
+    vertical-align: middle;
+  }
+
+  .history-table td.score-cell { font-weight: 700; font-size: 13px; }
+
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,14,26,0.85);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .loading-overlay.visible { display: flex; }
+
+  .loading-box {
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    padding: 2rem 2.5rem;
+    text-align: center;
+    min-width: 300px;
+  }
+
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--surface3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 1rem;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-step { font-family: var(--font); font-size: 13px; color: var(--accent); margin-bottom: 4px; }
+  .loading-sub { font-size: 11px; color: var(--text-dim); }
+
+  .loading-progress { margin-top: 1rem; height: 2px; background: var(--surface3); border-radius: 1px; overflow: hidden; }
+  .loading-progress-bar { height: 100%; background: var(--accent); border-radius: 1px; transition: width 0.5s ease; }
+
+  .batch-section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+
+  .batch-header {
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .batch-title { font-size: 13px; font-weight: 600; color: var(--text); }
+
+  .batch-body { padding: 1.25rem; display: none; }
+  .batch-body.open { display: block; }
+
+  .batch-results { margin-top: 1rem; display: flex; flex-direction: column; gap: 6px; }
+
+  .batch-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+  }
+
+  .batch-rank { font-family: var(--font); font-size: 11px; color: var(--text-dim); width: 20px; flex-shrink: 0; }
+  .batch-score { font-family: var(--font); font-size: 15px; font-weight: 700; width: 44px; flex-shrink: 0; }
+  .batch-preview { flex: 1; font-size: 11px; color: var(--text-muted); font-family: var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+
+  .chapter-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 7px 10px;
+    border-bottom: 1px solid rgba(99,179,237,0.06);
+    cursor: pointer;
+    transition: background 0.15s;
+    user-select: none;
+  }
+  .chapter-item:last-child { border-bottom: none; }
+  .chapter-item:hover { background: rgba(99,179,237,0.07); }
+  .chapter-item.selected { background: rgba(99,179,237,0.12); }
+  .chapter-item.range-highlight { background: rgba(79,209,197,0.08); }
+
+  .chapter-cb {
+    width: 14px; height: 14px;
+    border: 1.5px solid var(--border-strong);
+    border-radius: 3px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    background: transparent;
+  }
+  .chapter-item.selected .chapter-cb { background: var(--accent); border-color: var(--accent); }
+  .chapter-cb-check { display: none; width: 8px; height: 8px; }
+  .chapter-item.selected .chapter-cb-check { display: block; }
+
+  .chapter-info { flex: 1; min-width: 0; }
+  .chapter-num-label { font-family: var(--font); font-size: 11px; color: var(--accent); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chapter-title-label { font-size: 11px; color: var(--text-muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .tab-bar { display: flex; border-bottom: 1px solid var(--border); padding: 0 2rem; background: var(--surface); }
+
+  .tab-btn {
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 10px 16px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.2s;
+  }
+
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: flex; flex-direction: column; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .left-panel { border-right: none; border-bottom: 1px solid var(--border); }
+    .breakdown-grid { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">8D</div>
+    SEP 必要性檢測系統
+  </div>
+  <div class="header-badge">8-DIM VECTOR · LOCAL · SYNONYM-NORM</div>
+</header>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <div class="loading-step" id="loadingStep">初始化...</div>
+    <div class="loading-sub" id="loadingSub">請稍候，正在分析技術文本</div>
+    <div class="loading-progress">
+      <div class="loading-progress-bar" id="progressBar" style="width:10%"></div>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="left-panel">
+
+    <div class="panel-section">
+      <div class="section-label">規格書章節資料庫</div>
+
+      <div style="margin-bottom:0.75rem;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;">
+        <div style="font-family:var(--font);font-size:10px;color:var(--accent2);letter-spacing:0.06em;margin-bottom:6px;">☁ GOOGLE DRIVE 預設規格書</div>
+        <div style="display:flex;gap:5px;align-items:center;">
+          <input type="text" id="driveUrlInput" placeholder="貼上 Drive 分享連結或 CSV 直連網址…"
+            style="flex:1;font-size:10px;padding:5px 7px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--font);outline:none;min-width:0;"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+            onkeydown="if(event.key==='Enter')saveDriveUrl()" />
+          <button onclick="saveDriveUrl()" title="儲存並立即載入"
+            style="background:var(--accent2);color:#0a0e1a;border:none;border-radius:4px;font-family:var(--font);font-size:10px;font-weight:700;padding:5px 9px;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+            儲存載入
+          </button>
+          <button onclick="clearDriveUrl()" title="清除預設網址"
+            style="background:transparent;border:1px solid var(--border);border-radius:4px;font-family:var(--font);font-size:10px;color:var(--text-dim);padding:5px 7px;cursor:pointer;flex-shrink:0;">
+            清除
+          </button>
+        </div>
+        <div id="driveStatus" style="font-size:10px;font-family:var(--font);margin-top:4px;color:var(--text-dim);min-height:13px;line-height:1.3;"></div>
+      </div>
+
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 16v-8m0 0l-3 3m3-3l3 3M20 21H4a2 2 0 01-2-2V5a2 2 0 012-2h10l8 8v8a2 2 0 01-2 2z"/>
+        </svg>
+        <div class="upload-text">
+          <strong>拖曳或點擊上傳</strong>
+          CSV / JSON 規格書章節
+        </div>
+        <div class="upload-hint">格式：id, chapter, title, content</div>
+      </div>
+      <input type="file" id="fileInput" accept=".csv,.json" onchange="handleFileUpload(event)" />
+
+      <div class="db-stats" id="dbStats">
+        <div class="stat-chip"><span class="num" id="statChapters">0</span><span class="lbl">章節</span></div>
+        <div class="stat-chip"><span class="num" id="statChars">0</span><span class="lbl">字元</span></div>
+      </div>
+
+      <div style="margin-top:0.75rem;">
+        <button onclick="loadSampleDB()"
+          style="background:transparent;border:1px dashed var(--border-strong);border-radius:5px;color:var(--text-muted);font-size:11px;font-family:var(--font);padding:5px 12px;cursor:pointer;width:100%;transition:all 0.2s;"
+          onmouseover="this.style.borderColor='var(--accent2)';this.style.color='var(--accent2)'"
+          onmouseout="this.style.borderColor='var(--border-strong)';this.style.color='var(--text-muted)'">
+          載入 HEVC 範例資料庫
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-section" style="padding-bottom:0.75rem;">
+      <div class="section-label">選擇規格書章節範圍</div>
+
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+        <input type="text" id="rangeFrom" placeholder="起 §8.4.1" style="flex:1;font-size:11px;padding:6px 8px;" oninput="highlightRange()" />
+        <span style="color:var(--text-dim);font-size:12px;">—</span>
+        <input type="text" id="rangeTo" placeholder="迄 §8.4.4" style="flex:1;font-size:11px;padding:6px 8px;" oninput="highlightRange()" />
+        <button onclick="applyRange()"
+          style="background:var(--accent);color:#0a0e1a;border:none;border-radius:5px;font-family:var(--font);font-size:11px;font-weight:700;padding:6px 10px;cursor:pointer;white-space:nowrap;transition:all 0.2s;"
+          onmouseover="this.style.background='#90cdf4'" onmouseout="this.style.background='var(--accent)'">套用</button>
+      </div>
+
+      <div style="position:relative;margin-bottom:6px;">
+        <input type="text" id="chapterSearch" placeholder="搜尋章節..." style="width:100%;font-size:11px;padding:6px 8px 6px 28px;" oninput="filterChapterList()" disabled />
+        <svg style="position:absolute;left:8px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:var(--text-dim);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </div>
+
+      <div style="display:flex;gap:6px;margin-bottom:6px;" id="chapterActions">
+        <button onclick="selectAllFiltered()"
+          style="flex:1;background:transparent;border:1px solid var(--border-strong);border-radius:4px;color:var(--text-muted);font-size:10px;font-family:var(--font);padding:4px 0;cursor:pointer;transition:all 0.2s;"
+          onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'"
+          onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='var(--border-strong)'">全選</button>
+        <button onclick="clearSelection()"
+          style="flex:1;background:transparent;border:1px solid var(--border-strong);border-radius:4px;color:var(--text-muted);font-size:10px;font-family:var(--font);padding:4px 0;cursor:pointer;transition:all 0.2s;"
+          onmouseover="this.style.color='var(--red)';this.style.borderColor='var(--red)'"
+          onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='var(--border-strong)'">清除</button>
+      </div>
+
+      <div id="chapterList" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;background:var(--surface2);">
+        <div style="padding:20px;text-align:center;font-family:var(--font);font-size:11px;color:var(--text-dim);">請先上傳規格書</div>
+      </div>
+
+      <div id="selectionSummary" style="display:none;margin-top:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-family:var(--font);font-size:10px;color:var(--accent);" id="selectionCount">已選 0 個章節</span>
+          <span style="font-family:var(--font);font-size:10px;color:var(--text-dim);" id="selectionChars">0 字元</span>
+        </div>
+        <div class="spec-preview visible" id="specPreview" style="margin-top:0;"></div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">8 維屬性權重</div>
+      <div class="weight-list" id="weightList"></div>
+    </div>
+
+  </div>
+
+  <div class="main-panel">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('single', this)">單項檢測</button>
+      <button class="tab-btn" onclick="switchTab('batch', this)">批量模式</button>
+    </div>
+
+    <div class="tab-content active" id="tab-single">
+      <div class="main-content">
+
+        <div class="input-card">
+          <div class="input-card-header">
+            <div class="card-num">1</div>
+            <div class="card-title">規格書章節（已選取）</div>
+            <div class="card-subtitle" id="selectedChapterLabel">尚未選取</div>
+          </div>
+          <div class="input-card-body">
+            <div class="field-group">
+              <label>章節內容預覽</label>
+              <div class="spec-readonly" id="specReadonly">
+                <div class="spec-placeholder">← 請從左側選擇章節</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-card">
+          <div class="input-card-header">
+            <div class="card-num">2</div>
+            <div class="card-title">專利請求項</div>
+            <div class="card-subtitle">Independent Claim</div>
+          </div>
+          <div class="input-card-body">
+            <div class="field-row">
+              <div class="field-group" style="max-width:200px;">
+                <label>專利公開號</label>
+                <input type="text" id="patentId" placeholder="US2014/0146883A1" />
+              </div>
+              <div class="field-group" style="max-width:160px;">
+                <label>請求項編號</label>
+                <input type="text" id="claimNum" placeholder="Claim 1" />
+              </div>
+            </div>
+            <div class="field-group">
+              <label>請求項全文</label>
+              <textarea id="claimContent" rows="6" placeholder="A method for intra prediction in video coding, the method comprising:&#10;  selecting one of a plurality of intra prediction modes..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="run-area">
+          <button class="btn-run" id="runBtn" onclick="runDetection()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            計算 8D 向量必要性分數
+          </button>
+          <button class="btn-batch" onclick="switchTab('batch', document.querySelectorAll('.tab-btn')[1])">批量模式</button>
+        </div>
+
+        <div class="result-card" id="resultCard">
+          <div class="result-header">
+            <div>
+              <div class="score-badge" id="scoreBadge">—</div>
+              <div style="font-family:var(--font);font-size:10px;color:var(--text-dim);margin-top:2px;">/100</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div class="tier-badge" id="tierBadge">—</div>
+              <div style="font-size:11px;color:var(--text-muted);" id="tierDesc">—</div>
+            </div>
+            <div class="result-meta">
+              <div class="patent-num" id="resultPatentId">—</div>
+              <div class="chapter-num" id="resultChapter">—</div>
+            </div>
+          </div>
+          <div class="result-body">
+            <div class="breakdown-grid">
+              <div class="breakdown-item">
+                <div class="breakdown-label">基礎幾何距離</div>
+                <div class="breakdown-val accent" id="rawScore">—</div>
+              </div>
+              <div class="breakdown-item">
+                <div class="breakdown-label">膨脹校正後</div>
+                <div class="breakdown-val" id="inflatedScore">—</div>
+              </div>
+              <div class="breakdown-item">
+                <div class="breakdown-label">核心屬性均值</div>
+                <div class="breakdown-val boost" id="coreAvg">—</div>
+              </div>
+            </div>
+            <div class="attr-section-title">8 維屬性相似度明細</div>
+            <div class="attr-rows" id="attrRows"></div>
+            <div class="penalty-box" id="penaltyBox"></div>
+            <div class="tier-desc" id="tierDescBox"></div>
+          </div>
+
+          <div class="history-panel" id="historyPanel">
+            <div class="history-header">
+              <div class="history-title">檢測歷史</div>
+              <button class="btn-clear" onclick="clearHistory()">清除</button>
+            </div>
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>章節</th><th>專利號碼</th><th>分數</th><th>等級</th>
+                </tr>
+              </thead>
+              <tbody id="historyBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-batch">
+      <div class="main-content">
+        <div class="batch-section">
+          <div class="batch-header">
+            <div class="batch-title">批量請求項（同一章節）</div>
+          </div>
+          <div class="batch-body open">
+            <div class="field-group">
+              <label>多個請求項全文（以空行分隔）</label>
+              <textarea id="batchClaims" rows="10" placeholder="請求項 1 全文...&#10;&#10;請求項 2 全文...&#10;&#10;請求項 3 全文..."></textarea>
+            </div>
+            <div style="margin-top:1rem;">
+              <button class="btn-run" id="batchRunBtn" onclick="runBatch()" style="max-width:250px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                批量計算
+              </button>
+            </div>
+            <div class="batch-results" id="batchResults"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const ATTRIBUTES = [
+  {name:"元件",   key:"components",      weight:0.25, color:"#63b3ed"},
+  {name:"步驟",   key:"steps",           weight:0.15, color:"#63b3ed"},
+  {name:"流程",   key:"process_flow",    weight:0.15, color:"#63b3ed"},
+  {name:"數學公式",key:"math_formula",   weight:0.15, color:"#63b3ed"},
+  {name:"程式碼", key:"pseudocode",      weight:0.10, color:"#4fd1c5"},
+  {name:"相對位置",key:"relative_position",weight:0.08,color:"#68d391"},
+  {name:"順序",   key:"sequence",        weight:0.07, color:"#68d391"},
+  {name:"關聯性", key:"relevance",       weight:0.05, color:"#68d391"},
+];
+
+const GOLDEN_DATA = [
+  {scores:[0.36,0.31,0.26,0.15,0.10,0.40,0.25,0.35],label:1},
+  {scores:[0.85,0.80,0.75,0.70,0.65,0.72,0.60,0.55],label:1},
+  {scores:[0.78,0.72,0.68,0.55,0.50,0.65,0.45,0.40],label:1},
+  {scores:[0.70,0.65,0.70,0.60,0.55,0.58,0.50,0.45],label:1},
+  {scores:[0.65,0.60,0.55,0.50,0.45,0.50,0.40,0.35],label:1},
+  {scores:[0.40,0.35,0.30,0.20,0.15,0.38,0.30,0.25],label:1},
+  {scores:[0.15,0.10,0.12,0.05,0.08,0.10,0.05,0.03],label:0},
+  {scores:[0.10,0.08,0.05,0.03,0.02,0.06,0.02,0.01],label:0},
+  {scores:[0.20,0.15,0.10,0.08,0.05,0.12,0.05,0.03],label:0},
+  {scores:[0.30,0.20,0.15,0.10,0.08,0.18,0.08,0.05],label:0},
+];
+
+const SAMPLE_SPEC_DB = [
+  {id:"8.5.3.3",chapter:"§8.5.3.3",title:"次像素內插濾波器",content:"The luma fractional sample positions generated by motion compensation use a 7-tap or 8-tap interpolation filter. For luma, the filter coefficients for 1/4-pel interpolation positions use the following filter taps: [−1,4,−10,58,17,−5,1] for half-pel. The negative lobes (negative filter coefficients) of the luma interpolation filters serve to sharpen the prediction. The filter is designed to minimize the distortion while maintaining a flat frequency response. Fractional sample interpolation applies Hα and Hβ filters sequentially for diagonal positions, generating subsample positions at 1/4, 1/2, 3/4 integer offsets. The interpolation uses bi-linear filter for chroma (1/8-pel precision) with coefficients [8-d, d]/8."},
+  {id:"8.4.1",chapter:"§8.4.1",title:"幀內預測模式",content:"Intra prediction uses 35 prediction modes: planar mode (mode 0), DC mode (mode 1), and 33 angular modes (modes 2–34). The intra prediction for luma coding units selects the best mode based on rate-distortion optimization (RDO). For each CU, the encoder evaluates the most probable modes (MPM list) first. The MPM list contains up to 3 modes derived from neighboring blocks. Angular prediction generates reference samples from the reconstructed boundary pixels (left column and top row). The prediction direction is determined by the angle parameter associated with each mode. Planar mode uses a bilinear interpolation from four boundary pixels. DC mode computes the average of available boundary samples."},
+  {id:"8.6.1",chapter:"§8.6.1",title:"去方塊濾波器",content:"The deblocking filter operates on 8x8 block boundaries in the reconstructed picture. The filter decision uses boundary strength (Bs) values of 0, 1, or 2. Bs=2 for boundaries where one block uses intra prediction. Bs=1 for inter-coded blocks with reference or motion vector differences. The filter strength is controlled by QP-dependent thresholds β and tC. The luma deblocking applies up to 3-sample filtering on each side of the boundary. The decision criteria: |p0−q0|<β, |p1−p0|<tC, |q1−q0|<tC. Strong filter applies when |p2−p0|<β/4 and |q2−q0|<β/4. Chroma deblocking uses a single-sample filter with threshold tC."},
+  {id:"9.3.1",chapter:"§9.3.1",title:"CABAC 熵編碼初始化",content:"Context-adaptive binary arithmetic coding (CABAC) requires initialization of context variables before encoding each slice. Each context variable is defined by two parameters (pStateIdx, valMps) representing the probability state index and the most probable symbol value. The initialization table specifies initValue for each context for different slice QP values. The initialization process: pStateIdx = max(0,min(62, ((initValue>>4)*5*(qp−16)+offset+64)>>4)). valMps is derived from bits [3:0] of initValue. 128 context models are initialized per slice type. The arithmetic coder maintains a codIRange and codIOffset for range coding."},
+  {id:"8.7.1",chapter:"§8.7.1",title:"SAO 取樣自適應偏移",content:"Sample Adaptive Offset (SAO) is applied after deblocking loop filter to reduce distortions introduced by block-based coding. SAO compensates for pixel value errors between restored reconstructed pixels and original pixels by adding a compensation offset value. SAO classifies each sample into one of 5 categories based on edge or band characteristics. Edge offset (EO) uses four 1D edge direction patterns: 0 degree, 90 degree, 135 degree, 45 degree. EO category derivation compares neighboring reconstructed samples. EO determines pixel group membership based on the degree of closeness to maximum or minimum values among neighboring restored pixels. Band offset (BO) divides the total section of pixel values sample value range into 32 equal-width uniform bands. Non-uniform band splitting based on actual minimum and maximum values of original pixels and restored pixels is also supported. The selected SAO offset type EO or BO and compensation offset values are signaled in the bitstream syntax per CTU. Offset values are clipped to range and quantized. The encoder determines the compensation value for each pixel group and encodes it into the bitstream. The decoder extracts compensation values by parsing the bitstream and applies them to each pixel group of the restored image. SAO is applied to both luma and chroma components. ALF adaptive loop filter using plurality of continuous one-dimensional filters may also be applied to the restored reconstructed image."},
+  {id:"7.3.6",chapter:"§7.3.6",title:"預測單元語法",content:"A prediction unit (PU) defines the partition of a coding unit for prediction. For inter-prediction, motion information is signaled per PU including merge flag, merge index, inter prediction direction, reference picture indices, and motion vectors. The merge mode copies motion information from spatially or temporally adjacent PUs. The merge candidate list contains up to 5 candidates derived from: left neighbor, above neighbor, above-right, below-left, and temporal colocated block. MVD (motion vector difference) is coded using exponential Golomb or CABAC. The amvp (advanced motion vector prediction) mode uses two MVP candidates and signals the best index plus the MVD residual."},
+];
+
+let specDB = [];
+let selectedSpec = null;
+let selectedIds = new Set();
+let lastClickedId = null;
+let history = [];
+
+function initWeightList() {
+  const el = document.getElementById('weightList');
+  el.innerHTML = ATTRIBUTES.map(a => `
+    <div class="weight-row">
+      <div class="weight-dot" style="background:${a.color}"></div>
+      <div class="weight-name">${a.name}</div>
+      <div class="weight-bar-bg"><div class="weight-bar-fill" style="width:${a.weight*100}%;background:${a.color}"></div></div>
+      <div class="weight-pct">${Math.round(a.weight*100)}%</div>
+    </div>
+  `).join('');
+}
+
+function loadSpecDB(data) {
+  specDB = data;
+  selectedIds = new Set();
+  lastClickedId = null;
+  const stats = document.getElementById('dbStats');
+  stats.classList.add('visible');
+  document.getElementById('statChapters').textContent = data.length;
+  const totalChars = data.reduce((s,d) => s + (d.content||'').length, 0);
+  document.getElementById('statChars').textContent = totalChars > 1000 ? Math.round(totalChars/1000) + 'K' : totalChars;
+  document.getElementById('chapterSearch').disabled = false;
+  document.getElementById('chapterActions').style.display = 'flex';
+  renderChapterList(data);
+}
+
+function renderChapterList(items) {
+  const container = document.getElementById('chapterList');
+  if (items.length === 0) {
+    container.innerHTML = '<div style="padding:16px;text-align:center;font-family:var(--font);font-size:11px;color:var(--text-dim);">無符合章節</div>';
+    return;
+  }
+  container.innerHTML = items.map(d => `
+    <div class="chapter-item ${selectedIds.has(d.id) ? 'selected' : ''}" data-id="${d.id}" onclick="toggleChapter('${d.id}', event)">
+      <div class="chapter-cb">
+        <svg class="chapter-cb-check" viewBox="0 0 10 10" fill="none" stroke="white" stroke-width="1.8"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg>
+      </div>
+      <div class="chapter-info">
+        <span class="chapter-num-label">${d.chapter}</span>
+        <span class="chapter-title-label">${d.title}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleChapter(id, event) {
+  if (event.shiftKey && lastClickedId && lastClickedId !== id) {
+    const ids = specDB.map(d => d.id);
+    const a = ids.indexOf(lastClickedId);
+    const b = ids.indexOf(id);
+    const [from, to] = a < b ? [a,b] : [b,a];
+    for (let i = from; i <= to; i++) selectedIds.add(ids[i]);
+  } else {
+    if (selectedIds.has(id)) selectedIds.delete(id);
+    else selectedIds.add(id);
+  }
+  lastClickedId = id;
+  refreshChapterUI();
+}
+
+function refreshChapterUI() {
+  document.querySelectorAll('.chapter-item').forEach(el => {
+    el.classList.toggle('selected', selectedIds.has(el.dataset.id));
+  });
+  updateSelectionSummary();
+}
+
+function updateSelectionSummary() {
+  const selected = specDB.filter(d => selectedIds.has(d.id));
+  const summary = document.getElementById('selectionSummary');
+  if (selected.length === 0) {
+    summary.style.display = 'none';
+    selectedSpec = null;
+    document.getElementById('specReadonly').innerHTML = '<div class="spec-placeholder">← 請從左側選擇章節</div>';
+    document.getElementById('specReadonly').classList.remove('has-content');
+    document.getElementById('selectedChapterLabel').textContent = '尚未選取';
+    return;
+  }
+  summary.style.display = 'block';
+  document.getElementById('selectionCount').textContent = `已選 ${selected.length} 個章節`;
+  const totalChars = selected.reduce((s,d) => s + d.content.length, 0);
+  document.getElementById('selectionChars').textContent = totalChars > 1000 ? Math.round(totalChars/1000) + 'K 字元' : totalChars + ' 字元';
+  const mergedContent = selected.map(d => `[${d.chapter} ${d.title}]\n${d.content}`).join('\n\n---\n\n');
+  selectedSpec = {
+    id: selected.map(d=>d.id).join(','),
+    chapter: selected.length === 1 ? selected[0].chapter : `${selected[0].chapter} ~ ${selected[selected.length-1].chapter}`,
+    title: selected.length === 1 ? selected[0].title : `${selected.length} 個章節`,
+    content: mergedContent
+  };
+  document.getElementById('specPreview').textContent = mergedContent.substring(0, 280) + (mergedContent.length > 280 ? '...' : '');
+  const readonly = document.getElementById('specReadonly');
+  readonly.textContent = mergedContent.substring(0, 400) + (mergedContent.length > 400 ? '...' : '');
+  readonly.classList.add('has-content');
+  document.getElementById('selectedChapterLabel').textContent =
+    selected.length === 1 ? `${selected[0].chapter} ${selected[0].title}` :
+    selected.map(d => d.chapter).join(', ');
+}
+
+function filterChapterList() {
+  const q = document.getElementById('chapterSearch').value.toLowerCase();
+  const filtered = q ? specDB.filter(d =>
+    d.chapter.toLowerCase().includes(q) ||
+    d.title.toLowerCase().includes(q) ||
+    d.content.toLowerCase().includes(q)
+  ) : specDB;
+  renderChapterList(filtered);
+}
+
+function selectAllFiltered() {
+  document.querySelectorAll('.chapter-item').forEach(el => selectedIds.add(el.dataset.id));
+  refreshChapterUI();
+}
+
+function clearSelection() {
+  selectedIds.clear();
+  lastClickedId = null;
+  refreshChapterUI();
+}
+
+function applyRange() {
+  const from = document.getElementById('rangeFrom').value.trim().replace(/^§/,'');
+  const to = document.getElementById('rangeTo').value.trim().replace(/^§/,'');
+  if (!from) { showToast('請輸入起始章節', true); return; }
+  const normalize = s => s.replace(/^§/,'').toLowerCase();
+  const nFrom = normalize(from);
+  const nTo = to ? normalize(to) : null;
+  const ids = specDB.map(d => normalize(d.chapter));
+  const iFrom = ids.findIndex(id => id.startsWith(nFrom) || id === nFrom);
+  let iTo = nTo ? (() => {
+    for (let i = ids.length-1; i >= 0; i--) {
+      if (ids[i].startsWith(nTo) || ids[i] === nTo) return i;
+    }
+    return -1;
+  })() : iFrom;
+  if (iTo === -1) iTo = iFrom;
+  if (iFrom === -1) { showToast(`找不到章節 §${from}`, true); return; }
+  if (iFrom > iTo) { showToast('起始章節不能在迄止之後', true); return; }
+  for (let i = iFrom; i <= iTo; i++) selectedIds.add(specDB[i].id);
+  lastClickedId = specDB[iTo].id;
+  renderChapterList(specDB);
+  document.querySelectorAll('.chapter-item').forEach(el => {
+    el.classList.toggle('selected', selectedIds.has(el.dataset.id));
+  });
+  updateSelectionSummary();
+  showToast(`已選取 ${iTo - iFrom + 1} 個章節`);
+}
+
+function highlightRange() {
+  const from = document.getElementById('rangeFrom').value.trim().replace(/^§/,'').toLowerCase();
+  document.querySelectorAll('.chapter-item').forEach(el => {
+    const ch = specDB.find(d => d.id === el.dataset.id);
+    if (!ch) return;
+    const chN = ch.chapter.replace(/^§/,'').toLowerCase();
+    const inRange = from && chN.startsWith(from.substring(0,3));
+    el.classList.toggle('range-highlight', inRange && !selectedIds.has(el.dataset.id));
+  });
+}
+
+function loadSampleDB() {
+  loadSpecDB(SAMPLE_SPEC_DB);
+  showToast('已載入 6 個 HEVC 範例章節');
+}
+
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => parseUploadedFile(e.target.result, file.name);
+  reader.readAsText(file, 'UTF-8');
+}
+
+function handleDragOver(e) { e.preventDefault(); document.getElementById('uploadZone').classList.add('drag-over'); }
+function handleDragLeave(e) { document.getElementById('uploadZone').classList.remove('drag-over'); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => parseUploadedFile(ev.target.result, file.name);
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseUploadedFile(text, filename) {
+  try {
+    let data;
+    if (filename.endsWith('.json')) {
+      data = JSON.parse(text);
+      if (!Array.isArray(data)) data = Object.values(data);
+    } else {
+      data = parseCSV(text);
+    }
+    if (data.length === 0) { showToast('檔案內容為空', true); return; }
+    data = data.map((d,i) => ({
+      id: d.id || d.chapter_id || String(i+1),
+      chapter: d.chapter || d.chapter_num || d.section || `§${d.id || i+1}`,
+      title: d.title || d.name || '未命名',
+      content: d.content || d.text || d.body || ''
+    }));
+    loadSpecDB(data);
+    showToast(`已載入 ${data.length} 個章節`);
+  } catch(err) {
+    showToast('解析失敗：' + err.message, true);
+  }
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g,''));
+  return lines.slice(1).map(line => {
+    const cols = splitCSVLine(line);
+    const obj = {};
+    headers.forEach((h,i) => obj[h] = (cols[i] || '').replace(/^"|"$/g,'').trim());
+    return obj;
+  });
+}
+
+function splitCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQuotes = !inQuotes; }
+    else if (ch === ',' && !inQuotes) { result.push(current); current = ''; }
+    else { current += ch; }
+  }
+  result.push(current);
+  return result;
+}
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+async function runDetection() {
+  if (!selectedSpec) { showToast('請先選擇規格書章節', true); return; }
+  const claim = document.getElementById('claimContent').value.trim();
+  if (!claim) { showToast('請輸入專利請求項', true); return; }
+  const patentId = document.getElementById('patentId').value.trim() || '未指定';
+  const claimNum = document.getElementById('claimNum').value.trim() || 'Claim 1';
+  showLoading(true);
+  document.getElementById('runBtn').disabled = true;
+  try {
+    setLoadingStep('提取規格書章節 8 屬性...', 30);
+    const specAttrs = extractAttrs(selectedSpec.content, '技術規格書章節');
+    setLoadingStep('提取專利請求項 8 屬性...', 60);
+    const claimAttrs = extractAttrs(claim, '專利請求項');
+    setLoadingStep('計算 8 維向量幾何距離...', 85);
+    const result = computeScore(specAttrs, claimAttrs);
+    setLoadingStep('生成分析報告...', 98);
+    await sleep(200);
+    showLoading(false);
+    renderResult(result, patentId, claimNum, selectedSpec.chapter + ' ' + selectedSpec.title);
+    addHistory(selectedSpec.chapter, patentId, result);
+  } catch(err) {
+    showLoading(false);
+    showToast('分析失敗：' + err.message, true);
+  } finally {
+    document.getElementById('runBtn').disabled = false;
+  }
+}
+
+async function runBatch() {
+  if (!selectedSpec) { showToast('請先選擇規格書章節', true); return; }
+  const raw = document.getElementById('batchClaims').value.trim();
+  if (!raw) { showToast('請輸入批量請求項', true); return; }
+  const claims = raw.split(/\n\s*\n/).map(c => c.trim()).filter(Boolean);
+  if (claims.length === 0) { showToast('未偵測到有效請求項', true); return; }
+  showLoading(true);
+  document.getElementById('batchRunBtn').disabled = true;
+  try {
+    setLoadingStep('提取規格書 8 屬性...', 10);
+    const specAttrs = extractAttrs(selectedSpec.content, '技術規格書章節');
+    const results = [];
+    for (let i = 0; i < claims.length; i++) {
+      const pct = 20 + Math.round((i/claims.length) * 70);
+      setLoadingStep(`[${i+1}/${claims.length}] 分析請求項...`, pct);
+      const claimAttrs = extractAttrs(claims[i], '專利請求項');
+      const r = computeScore(specAttrs, claimAttrs);
+      r.preview = claims[i].substring(0, 80);
+      results.push(r);
+    }
+    results.sort((a,b) => b.score - a.score);
+    showLoading(false);
+    renderBatchResults(results);
+  } catch(err) {
+    showLoading(false);
+    showToast('批量分析失敗：' + err.message, true);
+  } finally {
+    document.getElementById('batchRunBtn').disabled = false;
+  }
+}
+
+// ── SYNONYM MAP (複合詞規則優先) ──
+// ── SYNONYM MAP v3 (122 條規則，複合詞優先，中間態避免雙重觸發) ──
+const SYNONYM_MAP = [
+  [/\bfinite impulse response filter\b/gi, '8-tap interp-filter FIR'],
+  [/\btruncated sinc filter\b/gi, '8-tap interp-filter'],
+  [/\bnegative lobe portion[s]?\b/gi, 'negative filter coefficients'],
+  [/\bnegative lobe[s]?\b/gi, 'negative filter coefficients'],
+  [/\bhalf-?way subpixel point\b/gi, 'half-pel fractional sample position'],
+  [/\bone-quarter-?way subpixel point\b/gi, '1/4-pel fractional sample position'],
+  [/\bthree-quarter-?way subpixel point\b/gi, '3/4-pel fractional sample position'],
+  [/\bsinc filter\b/gi, 'interp-filter'],
+  [/\bFIR filter\b/gi, 'interp-filter FIR'],
+  [/\biir filter\b/gi, 'interp-filter'],
+  [/\bbilinear filter\b/gi, 'bilinear interp-filter'],
+  [/\bwiener filter\b/gi, 'adaptive interp-filter'],
+  [/\binterpolation kernel\b/gi, 'interp-filter coefficients'],
+  [/\bfilter tap[s]?\b/gi, 'interp-filter tap coefficient'],
+  [/\btap weight[s]?\b/gi, 'filter coefficient interp-filter tap'],
+  [/\bimpulse response\b/gi, 'filter interp response'],
+  [/\bFIR\b/gi, 'interp-filter FIR'],
+  [/\bhalf-?way position[s]?\b/gi, 'half-pel fractional sample position'],
+  [/\bquarter-?way position[s]?\b/gi, '1/4-pel fractional sample position'],
+  [/\bfractional position[s]?\b/gi, 'fractional sample position pel'],
+  [/\bone-quarter[- ]pixel\b/gi, '1/4-pel fractional sample'],
+  [/\bone-half[- ]pixel\b/gi, 'half-pel fractional sample'],
+  [/\bone-eighth[- ]pixel\b/gi, '1/8-pel fractional sample'],
+  [/\bquarter[- ]pixel\b/gi, '1/4-pel fractional sample'],
+  [/\bhalf[- ]pixel\b/gi, 'half-pel fractional sample'],
+  [/\bfractional[- ]pixel\b/gi, 'fractional sample'],
+  [/\bsub-?pixel\b/gi, 'fractional sample'],
+  [/\binteger[- ]?pel\b/gi, 'integer sample reference sample'],
+  [/\bpel interpolat\w+/gi, 'fractional sample interpolation'],
+  [/\b1\/4[- ]pel\b/gi, '1/4-pel fractional sample'],
+  [/\b1\/2[- ]pel\b/gi, 'half-pel fractional sample'],
+  [/\binterp-filter\b/gi, 'interpolation filter'],
+  [/\bluminance channel\b/gi, 'luma component'],
+  [/\bchrominance channel\b/gi, 'chroma component'],
+  [/\bluma channel\b/gi, 'luma component'],
+  [/\bchroma channel\b/gi, 'chroma component'],
+  [/\bY channel\b/gi, 'luma component'],
+  [/\bCb channel\b/gi, 'Cb chroma component'],
+  [/\bCr channel\b/gi, 'Cr chroma component'],
+  [/\bcolor component\b/gi, 'colour component'],
+  [/\bmotion compensated prediction\b/gi, 'motion compensation inter prediction'],
+  [/\bmotion compensat\w+/gi, 'motion compensation inter prediction'],
+  [/\bmotion vector prediction\b/gi, 'advanced motion vector prediction AMVP'],
+  [/\bmotion information predictor\b/gi, 'motion vector predictor MVP AMVP'],
+  [/\bmotion predictor\b/gi, 'motion vector predictor MVP AMVP'],
+  [/\bblock matching\b/gi, 'motion estimation'],
+  [/\bfull[- ]search\b/gi, 'motion estimation search'],
+  [/\bsearch window\b/gi, 'motion estimation search window'],
+  [/\bsearch range\b/gi, 'motion estimation search range'],
+  [/\bdisplacement vector\b/gi, 'motion vector displacement'],
+  [/\bprediction error\b/gi, 'prediction residual'],
+  [/\bprediction residue\b/gi, 'prediction residual'],
+  [/\bMVD\b/gi, 'motion vector difference MVD'],
+  [/\bMVP\b/gi, 'motion vector predictor MVP AMVP'],
+  [/\bcandidate list\b/gi, 'merge candidate list MVP candidate'],
+  [/\bspatially adjacent\b/gi, 'spatial neighbor left above adjacent block'],
+  [/\btemporally collocat\w+\b/gi, 'temporal colocated block'],
+  [/\bpredictor candidate\b/gi, 'MVP candidate merge candidate'],
+  [/\bmost probable mode\b/gi, 'MPM most probable mode intra prediction'],
+  [/\bMPM\b/gi, 'most probable mode MPM intra prediction'],
+  [/\bboundary sample[s]?\b/gi, 'reference sample boundary pixel reconstructed'],
+  [/\bangle parameter\b/gi, 'angular mode prediction direction angle'],
+  [/\bprediction angle\b/gi, 'angular mode prediction direction'],
+  [/\bdc prediction\b/gi, 'DC mode average boundary sample'],
+  [/\bplanar prediction\b/gi, 'planar mode bilinear interpolation boundary pixel'],
+  [/\bcandidate mode[s]?\b/gi, 'prediction mode intra inter candidate'],
+  [/\bmacroblock\b/gi, 'coding unit CU'],
+  [/\bMB\b/gi, 'CU coding unit'],
+  [/\bsuper[- ]block\b/gi, 'coding tree unit CTU'],
+  [/\bcoding tree\b/gi, 'coding tree unit CTU'],
+  [/\btransform block\b/gi, 'transform unit TU'],
+  [/\bprediction block\b/gi, 'prediction unit PU'],
+  [/\bdequantiz\w+\b/gi, 'inverse quantization dequantization'],
+  [/\bDCT\b/gi, 'discrete cosine transform DCT'],
+  [/\bdiscrete cosine transform\b/gi, 'DCT transform'],
+  [/\bquantization step\b/gi, 'quantization parameter QP'],
+  [/\bquantization parameter\b/gi, 'QP quantization parameter'],
+  [/\binverse quantiz\w+/gi, 'inverse quantization dequantization'],
+  [/\binverse transform\w*/gi, 'inverse DCT transform'],
+  [/\bscaling factor\b/gi, 'quantization parameter QP scaling'],
+  [/\bprobability model\b/gi, 'context-var CABAC pStateIdx'],
+  [/\bprobability estimate\b/gi, 'context-var probability state CABAC'],
+  [/\bprobability state\b/gi, 'pStateIdx CABAC context state'],
+  [/\badaptive probability\b/gi, 'context-adaptive CABAC probability'],
+  [/\bcontext model\b/gi, 'CABAC context variable'],
+  [/\barithmetic encoder\b/gi, 'CABAC arithmetic coder entropy encoding'],
+  [/\bbinary symbol[s]?\b/gi, 'bin CABAC binary arithmetic coding'],
+  [/\bvariable[- ]length cod\w+/gi, 'entropy coding'],
+  [/\bVLC\b/gi, 'entropy coding'],
+  [/\bHuffman cod\w+/gi, 'entropy coding'],
+  [/\barithmetic cod\w+/gi, 'CABAC entropy coding'],
+  [/\bcontext[- ]adaptive\b/gi, 'context-adaptive CABAC'],
+  [/\brate[- ]distortion\b/gi, 'rate-distortion optimization RDO'],
+  [/\bLagrange multiplier\b/gi, 'lambda rate-distortion Lagrange'],
+  [/\bcost function\b/gi, 'rate-distortion cost RDO optimization'],
+  [/\bencoding cost\b/gi, 'rate-distortion cost bits distortion'],
+  [/\bminimum cost\b/gi, 'optimal mode selection RDO minimum'],
+  [/\bdeblocking filter\b/gi, 'deblocking filter loop filter'],
+  [/\bloop filter\b/gi, 'deblocking filter loop filter'],
+  [/\bin-loop filter\b/gi, 'deblocking filter loop filter'],
+  [/\bpost[- ]filter\b/gi, 'loop filter SAO'],
+  [/\bartifact reduction\b/gi, 'deblocking filter loop filter artifact'],
+  [/\bring artifact\b/gi, 'SAO sample adaptive offset distortion'],
+  [/\bblock artifact\b/gi, 'deblocking filter loop filter block artifact'],
+  [/\bcompensation value[s]?\b/gi, 'SAO offset value sample adaptive offset'],
+  [/\bextreme value level[s]?\b/gi, 'EO edge offset category SAO'],
+  [/\bedge value level[s]?\b/gi, 'edge offset EO category SAO'],
+  [/\bpixel group[s]?\b/gi, 'SAO category sample group classification'],
+  [/\brestored pixel[s]?\b/gi, 'reconstructed sample restored pixel SAO'],
+  [/\bneighboring restored pixel[s]?\b/gi, 'neighboring reconstructed sample SAO edge offset EO'],
+  [/\bnon-uniformly split\b/gi, 'non-uniform band offset BO SAO'],
+  [/\buniformly split\b/gi, 'uniform band offset BO SAO'],
+  [/\brestored image\b/gi, 'reconstructed picture decoded image SAO output'],
+  [/\bparsing (?:the )?bitstream\b/gi, 'bitstream parsing SAO syntax extraction'],
+  [/\badaptive loop filter\w*\b/gi, 'adaptive loop filter ALF SAO loop filter'],
+  [/\breference frame\b/gi, 'reference picture'],
+  [/\bI[- ]frame\b/gi, 'intra-coded frame IDR'],
+  [/\bP[- ]frame\b/gi, 'inter-predicted frame'],
+  [/\bB[- ]frame\b/gi, 'bi-directional predicted frame'],
+  [/\bbit rate\b/gi, 'bitrate'],
+  [/\brate control\b/gi, 'bitrate control'],
+  [/\bbits per pixel\b/gi, 'bits per sample bpp'],
+];
+
+
+
+const ATTR_PATTERNS = {
+  components: [
+    /\b(filter|unit|block|module|codec|encoder|decoder|buffer|register|table|matrix|array|coefficient|parameter|flag|index|value|mode|layer|frame|slice|CTU|CU|PU|TU|luma|chroma|pixel|sample|bit|byte|word|rate|level|stage|circuit|element|node|signal|output|input|reference|candidate|list|set|vector|transform|quantiz\w+|predict\w+|interpolat\w+|motion|intra|inter|deblock\w+|SAO|CABAC|entropy|syntax)\b/gi,
+  ],
+  steps: [
+    /\b(determin\w+|calculat\w+|comput\w+|deriv\w+|generat\w+|select\w+|apply\w+|perform\w+|execut\w+|obtain\w+|check\w+|evaluat\w+|process\w+|encod\w+|decod\w+|estimat\w+|assign\w+|initializ\w+|predict\w+|reconstruct\w+|transform\w+|quantiz\w+|filter\w+|complet\w+|signal\w+)\b/gi,
+  ],
+  process_flow: [
+    /\b(first|then|next|after|before|when|if|else|while|until|finally|subsequently|prior to|followed by|based on|according to|in order to|such that|wherein|whereby|step \w+|phase|stage|procedure|process|method|approach|algorithm)\b/gi,
+  ],
+  math_formula: [
+    /([A-Z][a-z]?\s*[=<>]\s*[\w\s\+\-\*\/\(\)\[\]\|\.]+)|(\b\d+[\-\/]\w+\b)|(\b(formula|equation|expression|threshold|coefficient|factor|ratio|offset|quantiz\w+|QP|lambda|alpha|beta|delta|sigma|sum|max|min|abs|log|floor|ceil|clip|shift|round)\b)/gi,
+  ],
+  pseudocode: [
+    /\b(if\s*\(|for\s*\(|while\s*\(|else|return|true|false|null|bool|int|flag|tabular|syntax|condition|loop|iterate|assign|set\s+\w+\s+to|let\s+\w+|var\s+\w+|\w+\[\w+\])\b/gi,
+  ],
+  relative_position: [
+    /\b(left|right|above|below|top|bottom|adjacent|neighbor\w*|boundary|inside|outside|between|within|across|beside|surround\w*|upper|lower|horizontal|vertical|diagonal|position\w*|location|spatial|region|area|edge|corner|center|collocat\w*)\b/gi,
+  ],
+  sequence: [
+    /\b(first|second|third|1st|2nd|3rd|\d+th|initial\w*|final\w*|last|previous|next|current|prior|subsequent|preceding|following|before|after|order|sequen\w*|serial|consecutive|successive|temporal|timing|earlier|later)\b/gi,
+  ],
+  relevance: [
+    /\b(depend\w*|based on|correlat\w*|associat\w*|relat\w*|connect\w*|link\w*|function\w*|operat\w*|interact\w*|communicat\w*|correspond\w*|affect\w*|influenc\w*|contribut\w*|enable\w*|allow\w*|support\w*|requir\w*|necessitat\w*)\b/gi,
+  ],
+};
+
+function normalizeSynonyms(text) {
+  let t = text;
+  for (const [pattern, replacement] of SYNONYM_MAP) {
+    t = t.replace(pattern, replacement);
+  }
+  return t;
+}
+
+function extractAttrs(text, textType) {
+  const normalized = normalizeSynonyms(text);
+  const sentences = normalized
+    .replace(/\n+/g, ' ')
+    .split(/(?<=[.;])\s+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 20);
+  const result = {};
+  for (const [key, patterns] of Object.entries(ATTR_PATTERNS)) {
+    const scored = sentences.map(sent => {
+      let hits = 0;
+      for (const pat of patterns) {
+        const matches = sent.match(new RegExp(pat.source, pat.flags));
+        hits += matches ? matches.length : 0;
+      }
+      return { sent, hits };
+    });
+    const top = scored
+      .filter(s => s.hits > 0)
+      .sort((a, b) => b.hits - a.hits)
+      .slice(0, 2)
+      .map(s => s.sent);
+    result[key] = top.length > 0 ? top.join(' ') : '無明確對應';
+  }
+  return result;
+}
+
+function tfidfSim(a, b) {
+  if (!a || !b || a.includes('無明確對應') || b.includes('無明確對應')) return 0;
+  const ngrams = (s, n) => {
+    const r = {};
+    for (let i = 0; i <= s.length - n; i++) {
+      const g = s.substring(i, i+n);
+      r[g] = (r[g] || 0) + 1;
+    }
+    return r;
+  };
+  const sa = a.toLowerCase(), sb = b.toLowerCase();
+  const ga = ngrams(sa, 3), gb = ngrams(sb, 3);
+  const keys = new Set([...Object.keys(ga), ...Object.keys(gb)]);
+  let dot = 0, na = 0, nb = 0;
+  for (const k of keys) {
+    const va = ga[k] || 0, vb = gb[k] || 0;
+    dot += va * vb; na += va * va; nb += vb * vb;
+  }
+  if (na === 0 || nb === 0) return 0;
+  return Math.max(0, Math.min(1, dot / (Math.sqrt(na) * Math.sqrt(nb))));
+}
+
+function computeScore(specAttrs, claimAttrs) {
+  const sims = ATTRIBUTES.map(a => tfidfSim(specAttrs[a.key] || '', claimAttrs[a.key] || ''));
+  const weights = ATTRIBUTES.map(a => a.weight);
+  const weightedS = sims.map((s,i) => s * Math.sqrt(weights[i]));
+  const norm = Math.sqrt(weightedS.reduce((acc,v) => acc + v*v, 0));
+  const maxNorm = Math.sqrt(weights.reduce((acc,w) => acc + w, 0));
+  const rawScore = maxNorm > 0 ? (norm / maxNorm) * 100 : 0;
+  const inflated = Math.pow(rawScore / 100, 0.45) * 100;
+  const xgbBoost = simpleBooster(sims) * 40;
+  const boosted = inflated + xgbBoost;
+  const coreAvg = (sims[0]+sims[1]+sims[2]+sims[3]) / 4;
+  let penalty = 0;
+  const penaltyReasons = [];
+  if (coreAvg < 0.20) {
+    const p = (0.20 - coreAvg) * 250;
+    penalty += p;
+    penaltyReasons.push(`核心均值 ${(coreAvg*100).toFixed(1)}% 極低 -${p.toFixed(1)}`);
+  } else if (coreAvg < 0.35) {
+    const p = (0.35 - coreAvg) * 120;
+    penalty += p;
+    penaltyReasons.push(`核心均值 ${(coreAvg*100).toFixed(1)}% 偏低 -${p.toFixed(1)}`);
+  }
+  if (sims[0] < 0.15) {
+    const p = (0.15 - sims[0]) * 200;
+    penalty += p;
+    penaltyReasons.push(`元件 ${(sims[0]*100).toFixed(1)}% 極低 -${p.toFixed(1)}`);
+  } else if (sims[0] < 0.25) {
+    const p = (0.25 - sims[0]) * 80;
+    penalty += p;
+    penaltyReasons.push(`元件 ${(sims[0]*100).toFixed(1)}% 偏低 -${p.toFixed(1)}`);
+  }
+  const lowCore = sims.slice(0,4).filter(s => s < 0.25).length;
+  if (lowCore >= 3) {
+    const p = lowCore * 8;
+    penalty += p;
+    penaltyReasons.push(`${lowCore}/4 核心<25% 散佈罰 -${p.toFixed(1)}`);
+  }
+  const finalScore = Math.max(0, Math.min(100, boosted - penalty));
+  let tier, tierLabel, tierDesc;
+  if (finalScore >= 70) {
+    tier = 'HIGH'; tierLabel = '高度必要 (HIGH)';
+    tierDesc = '該專利技術與標準規格高度吻合，極可能為標準必要專利';
+  } else if (finalScore >= 45) {
+    tier = 'MID'; tierLabel = '中度必要 (MID)';
+    tierDesc = '部分技術特徵吻合，需進一步人工審查確認';
+  } else {
+    tier = 'LOW'; tierLabel = '低度必要 (LOW)';
+    tierDesc = '技術關聯性較低，不太可能為標準必要專利';
+  }
+  return {
+    score: Math.round(finalScore * 10) / 10,
+    rawScore: Math.round(rawScore * 10) / 10,
+    inflatedScore: Math.round(inflated * 10) / 10,
+    xgbBoost: Math.round(xgbBoost * 10) / 10,
+    penalty: Math.round(penalty * 10) / 10,
+    penaltyReason: penaltyReasons.join(' | '),
+    tier, tierLabel, tierDesc,
+    sims, coreAvg: Math.round(coreAvg * 1000) / 1000,
+    specAttrs, claimAttrs
+  };
+}
+
+function simpleBooster(sims) {
+  const X = GOLDEN_DATA.map(d => d.scores);
+  const y = GOLDEN_DATA.map(d => d.label);
+  let sepSim = 0, nonSepSim = 0, sepCount = 0, nonSepCount = 0;
+  for (let i = 0; i < X.length; i++) {
+    const dot = X[i].reduce((acc,v,j) => acc + v*sims[j], 0);
+    const normX = Math.sqrt(X[i].reduce((acc,v) => acc+v*v, 0));
+    const normS = Math.sqrt(sims.reduce((acc,v) => acc+v*v, 0));
+    const sim = normX > 0 && normS > 0 ? dot / (normX * normS) : 0;
+    if (y[i] === 1) { sepSim += sim; sepCount++; }
+    else { nonSepSim += sim; nonSepCount++; }
+  }
+  const avgSep = sepCount > 0 ? sepSim / sepCount : 0;
+  const avgNon = nonSepCount > 0 ? nonSepSim / nonSepCount : 0;
+  const total = avgSep + avgNon;
+  return total > 0 ? avgSep / total : 0.5;
+}
+
+function renderResult(r, patentId, claimNum, chapterLabel) {
+  const card = document.getElementById('resultCard');
+  card.classList.add('visible');
+  const badge = document.getElementById('scoreBadge');
+  badge.textContent = r.score;
+  badge.className = 'score-badge ' + r.tier.toLowerCase();
+  const tierBadge = document.getElementById('tierBadge');
+  tierBadge.textContent = r.tierLabel;
+  tierBadge.className = 'tier-badge ' + r.tier.toLowerCase();
+  document.getElementById('tierDesc').textContent = '';
+  document.getElementById('resultPatentId').textContent = patentId + ' · ' + claimNum;
+  document.getElementById('resultChapter').textContent = chapterLabel;
+  document.getElementById('rawScore').textContent = r.rawScore;
+  document.getElementById('inflatedScore').textContent = r.inflatedScore;
+  document.getElementById('coreAvg').textContent = (r.coreAvg * 100).toFixed(1) + '%';
+  const rows = document.getElementById('attrRows');
+  rows.innerHTML = ATTRIBUTES.map((a,i) => {
+    const sim = r.sims[i];
+    const pct = Math.round(sim * 100);
+    const barColor = sim > 0.6 ? '#68d391' : sim > 0.35 ? '#f6ad55' : '#fc8181';
+    return `<div class="attr-row">
+      <div class="attr-name">${a.name}</div>
+      <div class="attr-weight">${Math.round(a.weight*100)}%</div>
+      <div class="attr-bar-bg"><div class="attr-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+      <div class="attr-sim" style="color:${barColor}">${pct}%</div>
+      <div class="attr-contrib">${(sim*a.weight*100).toFixed(1)}</div>
+    </div>`;
+  }).join('');
+  const pBox = document.getElementById('penaltyBox');
+  if (r.penalty > 0) {
+    pBox.textContent = `⚠ 懲罰扣分 -${r.penalty}：${r.penaltyReason}`;
+    pBox.classList.add('visible');
+  } else {
+    pBox.classList.remove('visible');
+  }
+  const dBox = document.getElementById('tierDescBox');
+  dBox.textContent = r.tierDesc;
+  dBox.className = 'tier-desc ' + r.tier.toLowerCase();
+  card.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function renderBatchResults(results) {
+  const container = document.getElementById('batchResults');
+  const dotColors = {HIGH:'#fc8181',MID:'#f6ad55',LOW:'#68d391'};
+  container.innerHTML = results.map((r,i) => `
+    <div class="batch-row">
+      <div class="batch-rank">${i+1}</div>
+      <div class="batch-score" style="color:${dotColors[r.tier]}">${r.score}</div>
+      <div style="width:48px;flex-shrink:0;"><span style="font-size:10px;font-family:var(--font);padding:2px 7px;border-radius:10px;background:${dotColors[r.tier]}22;color:${dotColors[r.tier]};border:1px solid ${dotColors[r.tier]}44">${r.tier}</span></div>
+      <div class="batch-preview">${r.preview}</div>
+    </div>`
+  ).join('');
+}
+
+function addHistory(chapter, patentId, result) {
+  history.push({ chapter, patentId, score: result.score, tier: result.tier });
+  document.getElementById('historyPanel').classList.add('visible');
+  const dotColors = {HIGH:'var(--high)',MID:'var(--mid)',LOW:'var(--low)'};
+  document.getElementById('historyBody').innerHTML = history.map((h,i) =>
+    `<tr>
+      <td>${i+1}</td>
+      <td>${h.chapter}</td>
+      <td style="color:var(--accent)">${h.patentId}</td>
+      <td class="score-cell" style="color:${dotColors[h.tier]}">${h.score}</td>
+      <td style="color:${dotColors[h.tier]}">${h.tier}</td>
+    </tr>`
+  ).join('');
+}
+
+function clearHistory() {
+  history = [];
+  document.getElementById('historyBody').innerHTML = '';
+  document.getElementById('historyPanel').classList.remove('visible');
+}
+
+function showLoading(visible) {
+  document.getElementById('loadingOverlay').classList.toggle('visible', visible);
+}
+
+function setLoadingStep(text, pct) {
+  document.getElementById('loadingStep').textContent = text;
+  document.getElementById('progressBar').style.width = pct + '%';
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function showToast(msg, isError = false) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  t.style.cssText = `position:fixed;bottom:24px;right:24px;background:${isError ? '#744210' : '#234e52'};border:1px solid ${isError ? '#f6ad55' : '#4fd1c5'};color:${isError ? '#f6ad55' : '#4fd1c5'};font-family:var(--font);font-size:12px;padding:10px 16px;border-radius:8px;z-index:9999;animation:fadeIn 0.2s ease`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+const _style = document.createElement('style');
+_style.textContent = '@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}';
+document.head.appendChild(_style);
+
+// ── Google Drive ──
+const DRIVE_URL_KEY = 'sep_drive_url';
+
+function driveShareToDirectUrl(url) {
+  // 已是 export CSV 直連（先判斷）
+  if (url.includes('spreadsheets') && url.includes('export') && url.includes('format=csv')) {
+    return url;
+  }
+
+  // Google Sheets 編輯連結
+  let m = url.match(/spreadsheets\/d\/([^\/\?&]+)/);
+  if (m) {
+    const sheetId = m[1];
+    const gidM = url.match(/[#?&]gid=(\d+)/);
+    const gid = gidM ? gidM[1] : '0';
+    return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+  }
+
+  // Drive 檔案分享連結
+  m = url.match(/drive\.google\.com\/file\/d\/([^\/\?&]+)/);
+  if (m) return `https://drive.google.com/uc?export=download&id=${m[1]}`;
+
+  // drive open?id=
+  m = url.match(/[?&]id=([^&]+)/);
+  if (m) return `https://drive.google.com/uc?export=download&id=${m[1]}`;
+
+  return url;
+}
+
+function setDriveStatus(msg, ok) {
+  const el = document.getElementById('driveStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = ok === true ? 'var(--accent2)' : ok === false ? 'var(--red)' : 'var(--text-dim)';
+}
+
+async function fetchAndLoadDriveUrl(rawUrl, silent) {
+  const directUrl = driveShareToDirectUrl(rawUrl.trim());
+  setDriveStatus('嘗試載入…', null);
+  const encoded = encodeURIComponent(directUrl);
+  const attempts = [
+    { url: `https://api.allorigins.win/get?url=${encoded}`, unwrap: true },
+    { url: `https://corsproxy.io/?${encoded}`, unwrap: false },
+    { url: directUrl, unwrap: false },
+  ];
+  let lastErr = '';
+  for (let i = 0; i < attempts.length; i++) {
+    const { url, unwrap } = attempts[i];
+    setDriveStatus(`嘗試方案 ${i+1}／${attempts.length}…`, null);
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) { lastErr = `HTTP ${resp.status}`; continue; }
+      let text;
+      if (unwrap) {
+        const json = await resp.json();
+        text = json.contents;
+      } else {
+        text = await resp.text();
+      }
+      if (!text || text.trim().length < 10) { lastErr = '回應內容為空'; continue; }
+      if (text.includes('accounts.google.com') || text.includes('Sign in')) {
+        lastErr = '試算表未公開，請設定「知道連結的人均可檢視」';
+        setDriveStatus(`✗ ${lastErr}`, false);
+        if (!silent) showToast(lastErr, true);
+        return;
+      }
+      const trimmed = text.trim();
+      let data;
+      if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+        data = JSON.parse(trimmed);
+      } else {
+        data = parseCSV(trimmed);
+      }
+      if (!data || !data.length) { lastErr = '解析後無資料'; continue; }
+      loadSpecDB(data);
+      setDriveStatus(`✓ 已載入 ${data.length} 章節`, true);
+      if (!silent) showToast(`Drive 規格書已載入：${data.length} 章節`);
+      return;
+    } catch(e) {
+      lastErr = e.message;
+    }
+  }
+  setDriveStatus(`✗ 所有方案均失敗：${lastErr}`, false);
+  if (!silent) showToast('Drive 載入失敗，請改用手動上傳', true);
+}
+
+function saveDriveUrl() {
+  const input = document.getElementById('driveUrlInput');
+  const url = input ? input.value.trim() : '';
+  if (!url) { showToast('請先貼上網址', true); return; }
+  localStorage.setItem(DRIVE_URL_KEY, url);
+  fetchAndLoadDriveUrl(url, false);
+}
+
+function clearDriveUrl() {
+  localStorage.removeItem(DRIVE_URL_KEY);
+  const input = document.getElementById('driveUrlInput');
+  if (input) input.value = '';
+  setDriveStatus('已清除預設網址', null);
+}
+
+function initDriveAutoLoad() {
+  const saved = localStorage.getItem(DRIVE_URL_KEY);
+  const input = document.getElementById('driveUrlInput');
+  if (saved) {
+    if (input) input.value = saved;
+    fetchAndLoadDriveUrl(saved, true);
+  }
+}
+
+initWeightList();
+initDriveAutoLoad();
+</script>
+</body>
+</html>

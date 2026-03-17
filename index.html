@@ -1793,6 +1793,33 @@ function initDriveAutoLoad() {
 
 initWeightList();
 initDriveAutoLoad();
+
+// ── 自動載入同目錄 data/hevc_spec.csv ──
+async function autoLoadBuiltinSpec() {
+  // 只在 Drive URL 沒有設定時才自動載入內建規格書
+  const savedDrive = localStorage.getItem('sep_drive_url');
+  if (savedDrive) return; // 使用者有自訂 Drive → 不覆蓋
+
+  try {
+    const resp = await fetch('./data/hevc_spec.csv');
+    if (!resp.ok) return; // 本地檔案不存在（直接開 HTML 時）
+    const text = await resp.text();
+    if (!text || text.trim().length < 50) return;
+    const data = parseCSV(text).map((d, i) => ({
+      id:      d.id || String(i + 1),
+      chapter: d.chapter || d.section || `§${d.id || i + 1}`,
+      title:   d.title || d.name || '未命名',
+      content: d.content || d.text || '',
+    }));
+    if (data.length === 0) return;
+    loadSpecDB(data);
+    setDriveStatus(`✓ 已自動載入內建規格書：${data.length} 章節`, true);
+    showToast(`HEVC 規格書已自動載入：${data.length} 章節`);
+  } catch (e) {
+    // 靜默失敗（本地直開 HTML 時 fetch 會被 CORS 擋，屬正常）
+  }
+}
+autoLoadBuiltinSpec();
 </script>
 </body>
 </html>

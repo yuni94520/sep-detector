@@ -1,0 +1,577 @@
+{
+  "_meta": {
+    "version": "2.0",
+    "name": "HEVC SEP Detector - H.264/MPEG→HEVC Terminology Bridge",
+    "description": "從 ITU-T H.265 規格書 232 個章節萃取的術語橋接規則，僅涵蓋被納入 HEVC 的技術",
+    "hevc_spec_chapters": 232,
+    "total_bridge_rules": 109,
+    "usage": "載入到 SEP Detector 後自動擴展 SYNONYM_MAP",
+    "format": "synonym_map_entries 可直接注入 SYNONYM_MAP array"
+  },
+  "categories": {
+    "A_inter_prediction_core": {
+      "name": "幀間預測核心 - Direct/Skip/Merge",
+      "hevc_spec_refs": [
+        "7.4.9.5",
+        "7.4.9.6",
+        "8.5.3.2.1"
+      ],
+      "synonym_map_entries": [
+        [
+          "direct prediction",
+          "merge mode skip mode temporal motion vector prediction TMVP"
+        ],
+        [
+          "direct mode",
+          "merge mode skip mode cu_skip_flag merge_flag inter prediction"
+        ],
+        [
+          "direct coding",
+          "skip mode merge mode no motion vector transmitted"
+        ],
+        [
+          "enhanced direct prediction",
+          "advanced motion vector prediction AMVP merge mode"
+        ],
+        [
+          "direct prediction model",
+          "merge candidate list temporal AMVP motion vector derivation"
+        ],
+        [
+          "skipped macroblock",
+          "skip mode CU cu_skip_flag merge candidate no residual"
+        ],
+        [
+          "skip macroblock",
+          "cu_skip_flag skip mode merge_flag equal 1 rqt_root_cbf zero"
+        ],
+        [
+          "predictable frame",
+          "inter-predicted frame B slice P slice inter prediction"
+        ],
+        [
+          "predicted frame",
+          "inter-predicted frame B slice P slice"
+        ],
+        [
+          "P picture",
+          "P slice inter prediction list0 reference"
+        ],
+        [
+          "B picture",
+          "B slice bi-prediction list0 list1 reference"
+        ],
+        [
+          "B frame",
+          "bi-directional predicted frame B slice inter_pred_idc PRED_BI"
+        ],
+        [
+          "P frame",
+          "inter-predicted frame P slice PRED_L0"
+        ]
+      ],
+      "hevc_definitions": {
+        "merge_flag": "specifies whether inter prediction parameters are inferred from neighbouring inter-predicted partition",
+        "cu_skip_flag": "specifies for current CU when decoding P or B slice no more syntax elements except merge_idx",
+        "inter_pred_idc": "specifies whether list0 list1 or bi-prediction is used PRED_L0 PRED_L1 PRED_BI"
+      }
+    },
+    "B_motion_vector_prediction": {
+      "name": "運動向量預測 - AMVP/Merge Candidate/TMVP",
+      "hevc_spec_refs": [
+        "8.5.3.2.2",
+        "8.5.3.2.5",
+        "8.5.3.2.6",
+        "8.5.3.2.7",
+        "8.5.3.2.8",
+        "7.4.9.6"
+      ],
+      "synonym_map_entries": [
+        [
+          "motion projection",
+          "temporal motion vector prediction TMVP collocated block temporal merging candidate"
+        ],
+        [
+          "pixel projection",
+          "temporal collocated motion vector TMVP derivation collocated block"
+        ],
+        [
+          "temporal direct mode",
+          "temporal merging candidate TMVP collocated motion vector slice_temporal_mvp_enabled_flag"
+        ],
+        [
+          "co-located block",
+          "collocated block colPic temporal reference picture"
+        ],
+        [
+          "co-located macroblock",
+          "collocated block coding unit temporal prediction"
+        ],
+        [
+          "collocated pixel",
+          "collocated block temporal motion vector mvLXCol colPic"
+        ],
+        [
+          "temporal reference",
+          "collocated picture colPic slice_temporal_mvp_enabled_flag"
+        ],
+        [
+          "Spatial Motion Vector Prediction",
+          "spatial motion vector prediction AMVP MVP candidate list mvp_l0_flag"
+        ],
+        [
+          "spatial direct mode",
+          "spatial merging candidate availableFlagA0 availableFlagB0 neighbouring partition"
+        ],
+        [
+          "neighbor motion vector",
+          "spatial merging candidate neighbouring inter-predicted partition"
+        ],
+        [
+          "neighbouring MV",
+          "spatial merging candidate motion vector neighbour prediction block"
+        ],
+        [
+          "velocity information",
+          "motion vector mvLX reference picture index temporal prediction"
+        ],
+        [
+          "acceleration information",
+          "motion vector temporal prediction delta MVD"
+        ],
+        [
+          "motion information",
+          "motion vector reference picture index merge candidate list"
+        ],
+        [
+          "motion predictor index",
+          "motion vector predictor index mvp_l0_flag mvp_l1_flag AMVP"
+        ],
+        [
+          "prediction vector",
+          "motion vector predictor MVP candidate mvpLX"
+        ]
+      ],
+      "hevc_definitions": {
+        "mvp_l0_flag": "specifies motion vector predictor index of list0",
+        "merge_idx": "specifies merging candidate index of the merging candidate list",
+        "ref_idx_l0": "specifies list0 reference picture index for current prediction unit"
+      }
+    },
+    "C_partition_modes": {
+      "name": "分割模式 - AMP/PU Partition",
+      "hevc_spec_refs": [
+        "7.4.9.5",
+        "9.3.3.5"
+      ],
+      "synonym_map_entries": [
+        [
+          "macroblock partition",
+          "prediction unit PU partition part_mode inter prediction partition type"
+        ],
+        [
+          "sub-macroblock partition",
+          "prediction unit PU asymmetric motion partition AMP"
+        ],
+        [
+          "8x16 partition",
+          "PART_Nx2N partition mode inter prediction"
+        ],
+        [
+          "16x8 partition",
+          "PART_2NxN partition mode inter prediction"
+        ],
+        [
+          "16x16 partition",
+          "PART_2Nx2N partition mode largest coding unit"
+        ],
+        [
+          "4x4 partition",
+          "PART_NxN minimum CU size prediction unit"
+        ],
+        [
+          "asymmetric partition",
+          "asymmetric motion partition AMP amp_enabled_flag PART_2NxnU PART_2NxnD"
+        ],
+        [
+          "AMP",
+          "asymmetric motion partition amp_enabled_flag PART_2NxnU PART_2NxnD PART_nLx2N PART_nRx2N"
+        ],
+        [
+          "mode identifying data",
+          "pred_mode_flag part_mode cu_skip_flag merge_flag inter_pred_idc prediction mode syntax"
+        ],
+        [
+          "partition flag",
+          "part_mode partitioning mode coding unit pred_mode_flag"
+        ],
+        [
+          "prediction mode flag",
+          "pred_mode_flag specifies current coding unit is coded in inter or intra prediction mode"
+        ],
+        [
+          "direct 8x8 inference",
+          "8x8 inter prediction sub-block motion vector"
+        ],
+        [
+          "4x4 sub-block",
+          "4x4 prediction block minimum PU partition NxN"
+        ]
+      ],
+      "hevc_definitions": {
+        "part_mode": "specifies partitioning mode of the current coding unit - PART_2Nx2N PART_2NxN PART_Nx2N PART_NxN PART_2NxnU PART_2NxnD PART_nLx2N PART_nRx2N",
+        "pred_mode_flag": "the current coding unit is coded in inter prediction mode."
+      }
+    },
+    "D_weighted_biprediction": {
+      "name": "加權/雙向預測",
+      "hevc_spec_refs": [
+        "8.5.3.3.4.2",
+        "8.5.3.3.4.3",
+        "7.4.3.3"
+      ],
+      "synonym_map_entries": [
+        [
+          "multi-hypothesis prediction",
+          "bi-prediction weighted prediction PRED_BI LIST_0 LIST_1 inter_pred_idc"
+        ],
+        [
+          "multi hypothesis",
+          "bi-prediction weighted sample prediction LIST_0 LIST_1"
+        ],
+        [
+          "weighted average submode",
+          "weighted sample prediction explicit weighted implicit weighted"
+        ],
+        [
+          "weighted average prediction",
+          "explicit weighted sample prediction luma_weight_l0_flag"
+        ],
+        [
+          "implicit weighted prediction",
+          "default weighted sample prediction process bi-prediction"
+        ],
+        [
+          "weighted bidirectional",
+          "weighted bi-prediction weighted_bipred_flag explicit weighted sample"
+        ],
+        [
+          "hypothesis",
+          "reference picture list LIST_0 LIST_1 bi-prediction inter prediction"
+        ]
+      ]
+    },
+    "E_entropy_coding": {
+      "name": "熵編碼 - CABAC/Binarization",
+      "hevc_spec_refs": [
+        "9.3.1",
+        "9.3.2.2",
+        "9.3.3.5"
+      ],
+      "synonym_map_entries": [
+        [
+          "codeword selection",
+          "binarization part_mode CABAC bin string entropy coding"
+        ],
+        [
+          "VLC codeword",
+          "binarization CABAC context-adaptive binary arithmetic coding entropy"
+        ],
+        [
+          "binary codeword",
+          "bin CABAC binarization binary arithmetic coding"
+        ],
+        [
+          "context initialization",
+          "CABAC context variable initialization pStateIdx valMps"
+        ],
+        [
+          "arithmetic codeword",
+          "CABAC arithmetic coding binarization entropy coding"
+        ],
+        [
+          "mode codeword",
+          "part_mode binarization Table9-59 entropy coding CABAC"
+        ],
+        [
+          "cabac init",
+          "cabac_init_flag CABAC context initialization table"
+        ],
+        [
+          "CAVLC codeword",
+          "exp-golomb coding entropy binarization"
+        ]
+      ]
+    },
+    "F_residual_transform": {
+      "name": "殘差/變換/量化",
+      "hevc_spec_refs": [
+        "8.5.4",
+        "8.6",
+        "7.4.9.10",
+        "7.4.9.11"
+      ],
+      "synonym_map_entries": [
+        [
+          "residue information",
+          "prediction residual coded block flag CBF cbf_luma transform coefficient"
+        ],
+        [
+          "residue block",
+          "transform unit TU residual coding coded block flag cbf_luma"
+        ],
+        [
+          "residual block",
+          "transform unit residual coding cbf_luma cbf_cb cbf_cr"
+        ],
+        [
+          "no residual",
+          "rqt_root_cbf equal 0 skip mode no transform coefficient"
+        ],
+        [
+          "quantization threshold",
+          "quantization parameter QP cu_qp_delta threshold condition"
+        ],
+        [
+          "QP condition",
+          "quantization parameter QP cu_qp_delta_abs QpY condition"
+        ],
+        [
+          "QP > 23",
+          "quantization parameter QP threshold cu_qp_delta condition"
+        ],
+        [
+          "lossless coding",
+          "cu_transquant_bypass_flag transform quantization bypass lossless"
+        ],
+        [
+          "transform bypass",
+          "cu_transquant_bypass_flag bypass scaling transform process"
+        ]
+      ]
+    },
+    "G_intra_prediction": {
+      "name": "幀內預測",
+      "hevc_spec_refs": [
+        "8.4.1",
+        "8.4.2",
+        "8.4.3",
+        "8.4.4.2"
+      ],
+      "synonym_map_entries": [
+        [
+          "4x4 intra prediction",
+          "INTRA_DC INTRA_PLANAR angular intra prediction 4x4 block"
+        ],
+        [
+          "16x16 intra prediction",
+          "INTRA_PLANAR DC mode intra prediction 16x16"
+        ],
+        [
+          "intra prediction direction",
+          "angular mode prediction direction 35 intra modes"
+        ],
+        [
+          "spatial intra prediction",
+          "intra prediction neighbouring sample reference sample boundary"
+        ],
+        [
+          "vertical intra mode",
+          "angular mode 26 vertical intra prediction direction"
+        ],
+        [
+          "horizontal intra mode",
+          "angular mode 10 horizontal intra prediction direction"
+        ],
+        [
+          "diagonal intra mode",
+          "angular mode diagonal intra prediction direction"
+        ],
+        [
+          "intra prediction mode signal",
+          "prev_intra_luma_pred_flag mpm_idx most probable mode MPM"
+        ],
+        [
+          "chroma intra prediction",
+          "intra_chroma_pred_mode chroma prediction mode derivation"
+        ]
+      ]
+    },
+    "H_loop_filter": {
+      "name": "迴圈濾波器 - Deblocking/SAO",
+      "hevc_spec_refs": [
+        "8.7.1",
+        "8.7.2",
+        "8.7.3"
+      ],
+      "synonym_map_entries": [
+        [
+          "post-processing filter",
+          "sample adaptive offset SAO compensation offset loop filter"
+        ],
+        [
+          "artifact reduction filter",
+          "deblocking filter loop filter boundary strength artifact"
+        ],
+        [
+          "ring artifact",
+          "SAO sample adaptive offset compensation edge offset EO band offset BO"
+        ],
+        [
+          "blocking artifact",
+          "deblocking filter loop filter boundary strength Bs luma"
+        ],
+        [
+          "in-loop deblocking",
+          "deblocking filter loop filter boundary filtering strength"
+        ],
+        [
+          "SAO compensation",
+          "sample adaptive offset SAO sao_type_idx_luma offset compensation"
+        ],
+        [
+          "edge correction",
+          "edge offset EO SAO classification category sample adaptive offset"
+        ],
+        [
+          "band offset",
+          "band offset BO SAO 32 uniform bands sample value range"
+        ]
+      ]
+    },
+    "I_reference_picture_management": {
+      "name": "參考圖像管理",
+      "hevc_spec_refs": [
+        "8.3.2",
+        "8.3.4",
+        "7.4.7.2",
+        "7.4.8"
+      ],
+      "synonym_map_entries": [
+        [
+          "reference frame management",
+          "reference picture set RPS short-term long-term reference picture"
+        ],
+        [
+          "long-term reference frame",
+          "long-term reference picture long-term RPS"
+        ],
+        [
+          "short-term reference frame",
+          "short-term reference picture RPS reference picture list"
+        ],
+        [
+          "reference frame reordering",
+          "reference picture list modification reordering"
+        ],
+        [
+          "picture order count",
+          "POC picture order count decoding order"
+        ],
+        [
+          "interlaced video",
+          "interlaced source field picture field_seq_flag"
+        ],
+        [
+          "field coding",
+          "field picture interlaced field_seq_flag source_scan_type"
+        ],
+        [
+          "MBAFF",
+          "adaptive frame field coding interlaced HEVC field picture"
+        ],
+        [
+          "collocated field",
+          "collocated block field picture temporal prediction"
+        ],
+        [
+          "temporal reference frame",
+          "temporal reference picture colPic collocated_from_l0_flag"
+        ]
+      ]
+    },
+    "J_interpolation_filter": {
+      "name": "插值濾波器 - 分像素運動補償",
+      "hevc_spec_refs": [
+        "8.5.3.3.3.2",
+        "8.5.3.3.3.3"
+      ],
+      "synonym_map_entries": [
+        [
+          "bilinear interpolation filter",
+          "bilinear chroma 1/8-pel interpolation filter coefficients"
+        ],
+        [
+          "half-pel filter",
+          "8-tap luma interpolation filter half-pel 1/2-pel position"
+        ],
+        [
+          "quarter-pel filter",
+          "7-tap luma interpolation filter 1/4-pel position fractional sample"
+        ],
+        [
+          "sub-pixel interpolation",
+          "fractional sample interpolation luma chroma motion compensation"
+        ],
+        [
+          "fractional pixel",
+          "fractional sample pel interpolation motion compensation filter"
+        ],
+        [
+          "motion compensation filter",
+          "luma sample interpolation 8-tap FIR filter coefficients"
+        ]
+      ]
+    },
+    "K_older_mpeg_h264_specific": {
+      "name": "較舊 MPEG/H.264 特有術語（功能等效型）",
+      "note": "這些術語在 HEVC 規格書中無直接對應，但功能上有等效實作",
+      "hevc_spec_refs": [
+        "0.7",
+        "6.3.2"
+      ],
+      "synonym_map_entries": [
+        [
+          "spatially correlated region",
+          "spatial neighbour prediction block inter prediction spatial merging candidate"
+        ],
+        [
+          "mode identifying data",
+          "prediction mode syntax element merge_flag cu_skip_flag pred_mode_flag part_mode"
+        ],
+        [
+          "prediction model type",
+          "inter prediction mode merge AMVP skip prediction unit partition"
+        ],
+        [
+          "directly derived",
+          "merge mode skip mode inferred from neighbouring inter-predicted partition"
+        ],
+        [
+          "predictively correlated",
+          "inter prediction motion compensation temporal reference picture"
+        ],
+        [
+          "reference frame temporally precedes",
+          "temporal reference picture collocated before current picture POC"
+        ],
+        [
+          "interlaced sequence of video fields",
+          "interlaced source field picture temporal field_seq_flag"
+        ],
+        [
+          "correlation between residue images",
+          "coded block flag CBF residual coding transform prediction residual"
+        ],
+        [
+          "submode selection",
+          "prediction mode type inter_pred_idc part_mode merge_flag AMVP"
+        ],
+        [
+          "null motion information",
+          "skip mode cu_skip_flag no MVD merge candidate zero motion vector"
+        ]
+      ]
+    }
+  }
+}

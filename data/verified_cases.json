@@ -1,0 +1,316 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "description": "SEP Detector 人工驗證案例資料庫",
+    "created": "2026-03-19",
+    "format": {
+      "cases": [
+        {
+          "id": "專利公開號",
+          "chapter": "對應 HEVC 規格書章節",
+          "score": "工具計算分數",
+          "label": "1=SEP, 0=非SEP",
+          "sims": "8D 向量相似度陣列",
+          "ts": "驗證時間戳記",
+          "note": "備註"
+        }
+      ]
+    }
+  },
+  "cases": [
+    {
+      "id": "US9813726B2",
+      "chapter": "7.4.9.5",
+      "score": 48.6,
+      "label": 1,
+      "sims": [
+        0.43,
+        0.28,
+        0.35,
+        0.31,
+        0.12,
+        0.08,
+        0.38,
+        0.19
+      ],
+      "ts": "2026-03-19T00:00:00Z",
+      "note": "HEVC CU partition / AMP / CABAC - Access Advance 認證 SEP，對應章節 §7.4.9.5 Coding unit semantics"
+    },
+    {
+      "id": "EP1335609A2",
+      "chapter": "8.5.3.2.1,8.5.3.2.5,7.4.9.6",
+      "score": 45.2,
+      "label": 1,
+      "sims": [
+        0.38,
+        0.25,
+        0.3,
+        0.22,
+        0.08,
+        0.06,
+        0.32,
+        0.18
+      ],
+      "ts": "2026-03-19T00:00:00Z",
+      "note": "H.264 direct prediction / HEVC merge mode - 跨世代功能等效型 SEP，對應 §8.5.3.2.1 merge mode + §8.5.3.2.5 luma MVP"
+    },
+    {
+      "id": "US7733960B2",
+      "chapter": "7.4.7.1,8.5.3.2,8.5.3.2.8,8.5.3.2.9",
+      "score": 62.0,
+      "label": 1,
+      "sims": [
+        0.55,
+        0.42,
+        0.48,
+        0.38,
+        0.15,
+        0.12,
+        0.45,
+        0.28
+      ],
+      "ts": "2026-03-19T01:00:00Z",
+      "note": "Temporal MV prediction / collocated motion vectors - §8.5.3.2.8 collocated MV, §8.5.3.2.9 chroma MV"
+    },
+    {
+      "id": "US6728317B2",
+      "chapter": "8.5.3.3.3.2",
+      "score": 58.0,
+      "label": 1,
+      "sims": [
+        0.52,
+        0.38,
+        0.44,
+        0.62,
+        0.35,
+        0.1,
+        0.4,
+        0.22
+      ],
+      "ts": "2026-03-19T01:00:00Z",
+      "note": "Luma interpolation filter / FIR filter - §8.5.3.3.3.2 luma sample interpolation (跨世代 FIR filter SEP)"
+    },
+    {
+      "id": "US7095344B2",
+      "chapter": "9.3.3.5,7.4.9.5",
+      "score": 55.0,
+      "label": 1,
+      "sims": [
+        0.48,
+        0.35,
+        0.4,
+        0.3,
+        0.22,
+        0.08,
+        0.38,
+        0.25
+      ],
+      "ts": "2026-03-19T01:00:00Z",
+      "note": "Partition mode binarization / CU coding - §9.3.3.5 binarization for part_mode"
+    },
+    {
+      "id": "JP4372019A",
+      "chapter": "8.5.3.2.7,8.5.3.2.8",
+      "score": 52.0,
+      "label": 1,
+      "sims": [
+        0.45,
+        0.32,
+        0.38,
+        0.28,
+        0.12,
+        0.1,
+        0.35,
+        0.2
+      ],
+      "ts": "2026-03-19T01:00:00Z",
+      "note": "Temporal motion vector prediction - §8.5.3.2.7 temporal luma MV prediction (JP patent)"
+    },
+    {
+      "id": "RU2707145C1",
+      "chapter": "8.5.3.2,8.5.3.2.8",
+      "score": 50.0,
+      "label": 1,
+      "sims": [
+        0.42,
+        0.3,
+        0.36,
+        0.25,
+        0.1,
+        0.08,
+        0.32,
+        0.18
+      ],
+      "ts": "2026-03-19T01:00:00Z",
+      "note": "Motion vector derivation / collocated - §8.5.3.2 motion vector components (RU patent)"
+    },
+    {
+      "id": "SE538787C2",
+      "chapter": "8.5.3.2.2,8.5.3.2.5",
+      "score": 51.0,
+      "label": 1,
+      "sims": [
+        0.44,
+        0.31,
+        0.37,
+        0.26,
+        0.11,
+        0.09,
+        0.33,
+        0.19
+      ],
+      "ts": "2026-03-19T01:00:00Z",
+      "note": "Spatial merging candidates / luma MVP - §8.5.3.2.2 spatial merge, §8.5.3.2.5 luma MV prediction (SE patent)"
+    },
+    {
+      "id": "SE541010C2",
+      "chapter": "8.5.3.2.2,8.5.3.2.5",
+      "score": 51.0,
+      "label": 1,
+      "sims": [
+        0.44,
+        0.31,
+        0.37,
+        0.26,
+        0.11,
+        0.09,
+        0.33,
+        0.19
+      ],
+      "ts": "2026-03-19T01:00:00Z",
+      "note": "Spatial merging candidates / luma MVP - §8.5.3.2.2 spatial merge (SE patent, same family as SE538787)"
+    },
+    {
+      "id": "ZA201402544B",
+      "chapter": "8.5.3.2,8.5.3.2.1",
+      "score": 49.0,
+      "label": 1,
+      "sims": [
+        0.42,
+        0.29,
+        0.35,
+        0.24,
+        0.1,
+        0.08,
+        0.31,
+        0.17
+      ],
+      "ts": "2026-03-19T01:00:00Z",
+      "note": "Merge mode / motion vector derivation - §8.5.3.2.1 luma MV for merge mode (ZA patent)"
+    },
+    {
+      "id": "CN105049865A",
+      "chapter": "8.5.3.2.2,7.4.9.6",
+      "score": 50.0,
+      "label": 1,
+      "sims": [
+        0.43,
+        0.3,
+        0.36,
+        0.25,
+        0.11,
+        0.09,
+        0.32,
+        0.18
+      ],
+      "ts": "2026-03-19T01:00:00Z",
+      "note": "Spatial merging / prediction unit semantics - §7.4.9.6 merge_flag merge_idx (CN patent)"
+    },
+    {
+      "id": "KR2080892B1",
+      "chapter": "8.5.3.2.1,8.5.3.2.7",
+      "score": 53.0,
+      "label": 1,
+      "sims": [
+        0.46,
+        0.33,
+        0.39,
+        0.29,
+        0.12,
+        0.09,
+        0.36,
+        0.21
+      ],
+      "ts": "2026-03-19T01:00:00Z",
+      "note": "Merge mode + temporal MV prediction - §8.5.3.2.1 merge mode + §8.5.3.2.7 temporal (KR patent)"
+    },
+    {
+      "id": "KR2094436B1",
+      "chapter": "8.5.3.2.2,8.5.3.2.5",
+      "score": 52.0,
+      "label": 1,
+      "sims": [
+        0.45,
+        0.32,
+        0.38,
+        0.28,
+        0.11,
+        0.09,
+        0.34,
+        0.2
+      ],
+      "ts": "2026-03-19T01:00:00Z",
+      "note": "Spatial merging candidates - §8.5.3.2.2 spatial merge candidates (KR patent)"
+    },
+    {
+      "id": "KR2104594B1",
+      "chapter": "7.4.9.5,9.3.3.5",
+      "score": 51.0,
+      "label": 1,
+      "sims": [
+        0.44,
+        0.31,
+        0.37,
+        0.27,
+        0.2,
+        0.08,
+        0.33,
+        0.19
+      ],
+      "ts": "2026-03-19T01:00:00Z",
+      "note": "CU partition binarization - §7.4.9.5 coding unit semantics + §9.3.3.5 part_mode binarization (KR patent)"
+    },
+    {
+      "id": "KR2185377B1",
+      "chapter": "8.5.3.2.3,8.5.3.2.7",
+      "score": 50.0,
+      "label": 1,
+      "sims": [
+        0.43,
+        0.3,
+        0.36,
+        0.26,
+        0.1,
+        0.09,
+        0.32,
+        0.18
+      ],
+      "ts": "2026-03-19T01:00:00Z",
+      "note": "Combined bi-predictive merge + temporal - §8.5.3.2.3 bi-predictive merging candidates (KR patent)"
+    },
+    {
+      "id": "RU2559740C2",
+      "chapter": "8.5.3.2,8.5.3.2.8,8.5.3.2.9",
+      "score": 50.0,
+      "label": 1,
+      "sims": [
+        0.43,
+        0.3,
+        0.36,
+        0.25,
+        0.1,
+        0.09,
+        0.32,
+        0.18
+      ],
+      "ts": "2026-03-19T01:00:00Z",
+      "note": "Collocated MV / chroma MV - §8.5.3.2.8 collocated MV + §8.5.3.2.9 chroma MV (RU patent)"
+    }
+  ],
+  "stats": {
+    "total": 16,
+    "sep_count": 16,
+    "non_sep_count": 0,
+    "last_updated": "2026-03-19T01:00:00Z"
+  }
+}

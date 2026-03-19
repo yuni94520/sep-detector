@@ -1793,6 +1793,116 @@ async function runBatch() {
   }
 }
 
+
+// ════════════════════════════════════════════════════════════════
+//  中文專利請求項橋接層
+//  自動偵測中文輸入 → 轉換為英文技術術語 → 再做 trigram 比對
+// ════════════════════════════════════════════════════════════════
+
+const ZH_EN_MAP = [
+  [/編碼單元/g, 'coding unit CU'],
+  [/編碼樹單元/g, 'coding tree unit CTU'],
+  [/預測單元/g, 'prediction unit PU'],
+  [/轉換單元/g, 'transform unit TU'],
+  [/最小\s*CU\s*大小/g, 'minimum CU size'],
+  [/最小編碼單元/g, 'minimum coding unit'],
+  [/四叉樹/g, 'quadtree'],
+  [/分割(?:區|塊|方式|模式)?/g, 'partition'],
+  [/編碼資料/g, 'coded data bitstream'],
+  [/碼字/g, 'codeword'],
+  [/非對稱運動分[割區塊]+/g, 'asymmetric motion partition AMP'],
+  [/運動向量/g, 'motion vector'],
+  [/運動補償/g, 'motion compensation inter prediction'],
+  [/運動估計/g, 'motion estimation'],
+  [/幀間預測/g, 'inter prediction'],
+  [/幀內預測/g, 'intra prediction'],
+  [/雙向預測/g, 'bi-directional prediction'],
+  [/參考圖[像帧]/g, 'reference picture'],
+  [/參考幀/g, 'reference picture'],
+  [/合併模式/g, 'merge mode candidate'],
+  [/合併候選/g, 'merge candidate list'],
+  [/跳過模式/g, 'skip mode'],
+  [/上下文自適應二進位算術編碼/g, 'CABAC context-adaptive binary arithmetic coding'],
+  [/上下文自適應變長編碼/g, 'CAVLC context-adaptive variable length coding'],
+  [/熵編碼/g, 'entropy coding CABAC'],
+  [/熵解碼/g, 'entropy decoding CABAC'],
+  [/算術編碼/g, 'arithmetic coding CABAC'],
+  [/上下文模型/g, 'context model CABAC pStateIdx'],
+  [/二進位化/g, 'binarization bin CABAC'],
+  [/離散餘弦轉換/g, 'discrete cosine transform DCT'],
+  [/量化參數/g, 'quantization parameter QP'],
+  [/量化步長/g, 'quantization step QP'],
+  [/反量化/g, 'inverse quantization dequantization'],
+  [/反轉換/g, 'inverse transform DCT'],
+  [/預測殘差/g, 'prediction residual'],
+  [/殘差/g, 'residual'],
+  [/去方塊濾波器?/g, 'deblocking filter loop filter'],
+  [/迴圈濾波器?/g, 'loop filter deblocking'],
+  [/取樣自適應偏移/g, 'sample adaptive offset SAO'],
+  [/偏移值/g, 'SAO offset value'],
+  [/最可能模式/g, 'most probable mode MPM'],
+  [/平面模式/g, 'planar mode'],
+  [/角度預測/g, 'angular prediction mode'],
+  [/預測模式/g, 'prediction mode'],
+  [/相鄰塊/g, 'neighboring block adjacent'],
+  [/重建[圖]?像素/g, 'reconstructed sample pixel SAO'],
+  [/視訊位元流/g, 'video bitstream'],
+  [/位元流/g, 'bitstream'],
+  [/解碼/g, 'decoding decoded'],
+  [/接收/g, 'receiving'],
+  [/傳輸/g, 'transmitting signaling'],
+  [/信令/g, 'signaling syntax'],
+  [/語法元素/g, 'syntax element'],
+  [/圖像/g, 'picture frame'],
+  [/切片/g, 'slice'],
+  [/亮度[分量]?/g, 'luma component'],
+  [/色度[分量]?/g, 'chroma component'],
+  [/像素/g, 'pixel sample'],
+  [/樣本/g, 'sample'],
+  [/停用/g, 'disabled'],
+  [/啟用/g, 'enabled'],
+  [/對應/g, 'corresponds corresponding'],
+  [/確定/g, 'determining'],
+  [/選擇/g, 'selecting'],
+  [/使用/g, 'using'],
+  [/方法/g, 'method'],
+  [/裝置/g, 'apparatus device'],
+  [/處理器/g, 'processor'],
+  [/大小/g, 'size'],
+  [/結構/g, 'structure'],
+  [/索賠\d+/g, ''],
+  [/該方法/g, 'the method'],
+  [/還包括/g, 'further comprising'],
+  [/其中/g, 'wherein'],
+  [/所述/g, 'the said'],
+  [/一個或多個/g, 'one or more'],
+  [/第一/g, 'first'],
+  [/第二/g, 'second'],
+  [/等於/g, 'equals'],
+  [/大於/g, 'greater than'],
+  [/小於/g, 'less than'],
+  [/基於/g, 'based on'],
+  [/包括[：:]?/g, 'comprising'],
+  [/編碼(?!單元|樹)/g, 'encoding coding'],
+];
+
+function hasChineseChars(text) {
+  return /[\u4e00-\u9fff]/.test(text);
+}
+
+function normalizeZhToEn(text) {
+  if (!hasChineseChars(text)) return text;  // 沒有中文，直接跳過
+  let t = text;
+  for (const [pat, rep] of ZH_EN_MAP) {
+    t = t.replace(pat, ' ' + rep + ' ');
+  }
+  // 移除剩餘中文字元
+  t = t.replace(/[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef（）【】、，。：；！？]+/g, ' ');
+  // 清理空白
+  t = t.replace(/\s+/g, ' ').trim();
+  return t;
+}
+
 // ── SYNONYM MAP (複合詞規則優先) ──
 // ── SYNONYM MAP v3 (122 條規則，複合詞優先，中間態避免雙重觸發) ──
 const SYNONYM_MAP = [
@@ -1958,7 +2068,9 @@ function normalizeSynonyms(text) {
 }
 
 function extractAttrs(text, textType) {
-  const normalized = normalizeSynonyms(text);
+  // 自動偵測中文，先橋接到英文術語
+  const zhConverted = normalizeZhToEn(text);
+  const normalized = normalizeSynonyms(zhConverted);
   const sentences = normalized
     .replace(/\n+/g, ' ')
     .split(/(?<=[.;])\s+/)

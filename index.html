@@ -1151,6 +1151,85 @@
   .db-table td { padding:5px 10px; border-bottom:1px solid rgba(96,165,250,0.04); color:var(--text-muted); font-family:var(--font-mono); font-size:10px; vertical-align:middle; }
   .db-table tr:hover td { background:rgba(96,165,250,0.03); }
 
+
+  /* ── TERMINOLOGY BRIDGE LOADER ── */
+  .bridge-bar {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    margin-bottom: 0.75rem;
+  }
+  .bridge-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--accent3);
+    letter-spacing: 0.1em;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .bridge-row { display: flex; gap: 5px; align-items: center; }
+  .bridge-status {
+    font-size: 9px;
+    font-family: var(--font-mono);
+    margin-top: 4px;
+    color: var(--text-dim);
+    min-height: 12px;
+  }
+  .bridge-stats {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+  }
+  .bridge-stat {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 6px;
+    text-align: center;
+  }
+  .bridge-stat .bn {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 300;
+    color: var(--accent3);
+    display: block;
+    line-height: 1;
+  }
+  .bridge-stat .bl {
+    font-size: 8px;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+  .btn-bridge {
+    background: rgba(251,191,36,0.1);
+    border: 1px solid rgba(251,191,36,0.3);
+    border-radius: 4px;
+    color: var(--accent3);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 5px 9px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-bridge:hover { background: rgba(251,191,36,0.18); }
+  .btn-bridge-clear {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 5px 7px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-bridge-clear:hover { border-color: var(--high); color: var(--high); }
+
 </style>
 </head>
 <body>
@@ -1187,6 +1266,38 @@
     <!-- SPEC DB -->
     <div class="panel-section">
       <div class="section-label">規格書資料庫</div>
+
+
+      <!-- TERMINOLOGY BRIDGE LOADER -->
+      <div class="bridge-bar">
+        <div class="bridge-label">⚡ 術語橋接規則庫</div>
+        <div class="bridge-row">
+          <input type="file" id="bridgeFileInput" accept=".json" style="display:none"
+            onchange="loadBridgeDB(event)" />
+          <button class="btn-bridge" onclick="document.getElementById('bridgeFileInput').click()">
+            ↑ 載入 JSON
+          </button>
+          <button class="btn-bridge" onclick="loadBuiltinBridge()">
+            內建規則
+          </button>
+          <button class="btn-bridge-clear" onclick="clearBridgeDB()">清除</button>
+        </div>
+        <div class="bridge-status" id="bridgeStatus">尚未載入橋接規則庫</div>
+        <div class="bridge-stats" id="bridgeStatsBar" style="display:none">
+          <div class="bridge-stat">
+            <span class="bn" id="bridgeTotalRules">0</span>
+            <span class="bl">橋接規則</span>
+          </div>
+          <div class="bridge-stat">
+            <span class="bn" id="bridgeCategories">0</span>
+            <span class="bl">類別</span>
+          </div>
+          <div class="bridge-stat">
+            <span class="bn" id="bridgeActive">0</span>
+            <span class="bl">啟用中</span>
+          </div>
+        </div>
+      </div>
 
       <div class="drive-block">
         <div class="drive-label">☁ Google Drive 規格書</div>
@@ -2792,6 +2903,100 @@ loadSpecDB = function(data) {
   _origLoadSpecDB(data);
   updateDbPill(data.length);
 };
+
+
+// ════════════════════════════════════════════════════════════════
+//  術語橋接規則庫 (Terminology Bridge DB)
+//  載入 hevc_terminology_bridge.json 後動態擴展 SYNONYM_MAP
+// ════════════════════════════════════════════════════════════════
+
+let BRIDGE_DB = null;
+let DYNAMIC_RULES = [];  // 從 JSON 載入的動態規則
+
+function loadBridgeDB(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      applyBridgeDB(JSON.parse(e.target.result), file.name);
+    } catch(err) {
+      setBridgeStatus('✗ 解析失敗: ' + err.message, false);
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function applyBridgeDB(db, source) {
+  BRIDGE_DB = db;
+  DYNAMIC_RULES = [];
+  let totalRules = 0;
+  const cats = db.categories || {};
+
+  for (const [catKey, cat] of Object.entries(cats)) {
+    const entries = cat.synonym_map_entries || [];
+    for (const [h264term, hevcterm] of entries) {
+      // 轉成正則，加入動態規則
+      try {
+        const escaped = h264term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const pat = new RegExp('\\b' + escaped + '\\b', 'gi');
+        DYNAMIC_RULES.push([pat, hevcterm]);
+        totalRules++;
+      } catch(e) { /* skip invalid regex */ }
+    }
+  }
+
+  const catCount = Object.keys(cats).length;
+  setBridgeStatus(`✓ 已載入 ${totalRules} 條橋接規則，${catCount} 個類別`, true);
+  document.getElementById('bridgeStatsBar').style.display = 'flex';
+  document.getElementById('bridgeTotalRules').textContent = totalRules;
+  document.getElementById('bridgeCategories').textContent = catCount;
+  document.getElementById('bridgeActive').textContent = totalRules;
+  showToast(`橋接規則庫已載入：${totalRules} 條規則`);
+}
+
+function setBridgeStatus(msg, ok) {
+  const el = document.getElementById('bridgeStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = ok === true ? 'var(--accent3)' : ok === false ? 'var(--high)' : 'var(--text-dim)';
+}
+
+function clearBridgeDB() {
+  BRIDGE_DB = null;
+  DYNAMIC_RULES = [];
+  document.getElementById('bridgeStatsBar').style.display = 'none';
+  setBridgeStatus('已清除橋接規則庫', null);
+}
+
+// 自動嘗試載入同目錄的 hevc_terminology_bridge.json
+async function loadBuiltinBridge() {
+  try {
+    setBridgeStatus('嘗試載入內建橋接規則庫...', null);
+    const resp = await fetch('./data/hevc_terminology_bridge.json');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const db = await resp.json();
+    applyBridgeDB(db, 'built-in');
+  } catch(e) {
+    setBridgeStatus('✗ 內建載入失敗，請手動上傳 JSON', false);
+  }
+}
+
+// ── 修補 normalizeSynonyms，加入動態規則 ──
+const _origNormalize = normalizeSynonyms;
+normalizeSynonyms = function(text) {
+  let t = _origNormalize(text);
+  // 再套用從 JSON 載入的動態橋接規則
+  for (const [pat, rep] of DYNAMIC_RULES) {
+    t = t.replace(pat, ' ' + rep + ' ');
+  }
+  return t;
+};
+
+// 頁面載入時自動嘗試載入內建橋接
+(async () => {
+  await loadBuiltinBridge();
+})();
 
 </script>
 </body>

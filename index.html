@@ -2028,28 +2028,70 @@ const SYNONYM_MAP = [
   [/\bbit rate\b/gi, 'bitrate'],
   [/\brate control\b/gi, 'bitrate control'],
   [/\bbits per pixel\b/gi, 'bits per sample bpp'],
+  // ══ 規格書縮寫 → 自然語言橋接 ══
+  // 讓規格書的 C 語法縮寫能被 claim 的自然語言描述匹配
+  [/\bamp_enabled_flag\b/gi,   'asymmetric motion partition AMP enabled flag'],
+  [/\bamp_enabled\b/gi,        'asymmetric motion partition AMP enabled'],
+  [/\bPART_2Nx2N\b/gi,        'INTER 2Nx2N partition mode'],
+  [/\bPART_2NxN\b/gi,         'INTER 2NxN partition mode'],
+  [/\bPART_Nx2N\b/gi,         'INTER Nx2N partition mode'],
+  [/\bPART_NxN\b/gi,          'INTER NxN partition minimum CU mode'],
+  [/\bPART_2NxnU\b/gi,        'INTER 2NxnU asymmetric motion partition AMP'],
+  [/\bPART_2NxnD\b/gi,        'INTER 2NxnD asymmetric motion partition AMP'],
+  [/\bPART_nLx2N\b/gi,        'INTER nLx2N asymmetric motion partition AMP'],
+  [/\bPART_nRx2N\b/gi,        'INTER nRx2N asymmetric motion partition AMP'],
+  [/\bpart_mode\b/gi,          'partition mode codeword CU partitioning type'],
+  [/\bMinCbLog2SizeY\b/gi,    'minimum CU size log2 MinCbLog2SizeY'],
+  [/\bMinCbSizeY\b/gi,        'minimum CU size coding unit'],
+  [/\blog2CbSize\b/gi,        'CU size log2 coding unit block'],
+  [/\bcu_skip_flag\b/gi,      'skip mode CU flag inter prediction'],
+  [/\bpred_mode_flag\b/gi,    'prediction mode inter intra flag'],
+  [/\bMODE_INTER\b/gi,        'inter prediction mode'],
+  [/\bMODE_INTRA\b/gi,        'intra prediction mode'],
+  [/\bMODE_SKIP\b/gi,         'skip mode inter prediction'],
+  [/\bcu_transquant_bypass_flag\b/gi, 'transform quantization bypass flag CU'],
+  [/\bpcm_flag\b/gi,          'PCM pulse code modulation flag'],
+  [/\bmerge_idx\b/gi,         'merge index candidate list'],
+  [/\bmvp_l0_flag\b/gi,       'motion vector predictor list0 MVP flag AMVP'],
+  [/\bmvp_l1_flag\b/gi,       'motion vector predictor list1 MVP flag AMVP'],
+  [/\binter_pred_idc\b/gi,    'inter prediction direction L0 L1 bi-prediction'],
+  [/\bref_idx_l[01]\b/gi,     'reference picture index list inter prediction'],
+  [/\bmvd_l[01]\b/gi,         'motion vector difference MVD'],
+  [/\bcbf_luma\b/gi,          'coded block flag luma transform coefficient'],
+  [/\bcbf_cb\b/gi,            'coded block flag chroma Cb transform'],
+  [/\bcbf_cr\b/gi,            'coded block flag chroma Cr transform'],
+  [/\bsplit_cu_flag\b/gi,     'CU split flag quadtree partition'],
+  [/\bskip_flag\b/gi,         'skip mode flag inter prediction'],
+  [/\bIntraSplitFlag\b/gi,    'intra split flag NxN partition'],
+  [/\bPartMode\b/gi,          'partition mode CU PU type'],
+  [/\bCtbSizeY\b/gi,          'coding tree block size luma CTU'],
+  [/\bCtbWidthC\b/gi,         'coding tree block width chroma'],
+  [/\bIntraChromaPredMode\b/gi, 'intra chroma prediction mode'],
+  [/\bsao_merge_flag\b/gi,    'SAO merge flag sample adaptive offset'],
+  [/\bsao_type_idx\b/gi,      'SAO type index edge band offset'],
+
 ];
 
 
 
 const ATTR_PATTERNS = {
   components: [
-    /\b(filter|unit|block|module|codec|encoder|decoder|buffer|register|table|matrix|array|coefficient|parameter|flag|index|value|mode|layer|frame|slice|CTU|CU|PU|TU|luma|chroma|pixel|sample|bit|byte|word|rate|level|stage|circuit|element|node|signal|output|input|reference|candidate|list|set|vector|transform|quantiz\w+|predict\w+|interpolat\w+|motion|intra|inter|deblock\w+|SAO|CABAC|entropy|syntax)\b/gi,
+    /\b(filter|unit|block|module|codec|encoder|decoder|buffer|register|table|matrix|array|coefficient|parameter|flag|index|value|mode|layer|frame|slice|CTU|CU|PU|TU|luma|chroma|pixel|sample|bit|byte|word|rate|level|stage|circuit|element|node|signal|output|input|reference|candidate|list|set|vector|transform|quantiz\w+|predict\w+|interpolat\w+|motion|intra|inter|deblock\w+|SAO|CABAC|CAVLC|entropy|syntax|partition|codeword|bitstream|AMP|minimum|enabled|disabled|structure)\b/gi,
   ],
   steps: [
     /\b(determin\w+|calculat\w+|comput\w+|deriv\w+|generat\w+|select\w+|apply\w+|perform\w+|execut\w+|obtain\w+|check\w+|evaluat\w+|process\w+|encod\w+|decod\w+|estimat\w+|assign\w+|initializ\w+|predict\w+|reconstruct\w+|transform\w+|quantiz\w+|filter\w+|complet\w+|signal\w+)\b/gi,
   ],
   process_flow: [
-    /\b(first|then|next|after|before|when|if|else|while|until|finally|subsequently|prior to|followed by|based on|according to|in order to|such that|wherein|whereby|step \w+|phase|stage|procedure|process|method|approach|algorithm)\b/gi,
+    /\b(first|then|next|after|before|when|if|else|while|until|finally|subsequently|prior to|followed by|based on|according to|in order to|such that|wherein|whereby|step \w+|phase|stage|procedure|process|method|approach|algorithm|equal to|not present|inferred|specifies|corresponds|disabled|enabled|greater than|less than|inclusive|range of|shall be)\b/gi,
   ],
   math_formula: [
-    /([A-Z][a-z]?\s*[=<>]\s*[\w\s\+\-\*\/\(\)\[\]\|\.]+)|(\b\d+[\-\/]\w+\b)|(\b(formula|equation|expression|threshold|coefficient|factor|ratio|offset|quantiz\w+|QP|lambda|alpha|beta|delta|sigma|sum|max|min|abs|log|floor|ceil|clip|shift|round)\b)/gi,
+    /([A-Z][a-z]?\s*[=<>]\s*[\w\s\+\-\*\/\(\)\[\]\|\.]+)|(\b\d+[\-\/]\w+\b)|(\b(formula|equation|expression|threshold|coefficient|factor|ratio|offset|quantiz\w+|QP|lambda|alpha|beta|delta|sigma|sum|max|min|abs|log|floor|ceil|clip|shift|round|N equals|equals 4|equals 0|equals 1|minimum CU|log2CbSize|MinCbLog2|2Nx2N|NxN|Nx2N|2NxN|nU|nD|nL|nR)\b)/gi,
   ],
   pseudocode: [
-    /\b(if\s*\(|for\s*\(|while\s*\(|else|return|true|false|null|bool|int|flag|tabular|syntax|condition|loop|iterate|assign|set\s+\w+\s+to|let\s+\w+|var\s+\w+|\w+\[\w+\])\b/gi,
+    /\b(if\s*\(|for\s*\(|while\s*\(|else|return|true|false|null|bool|int|flag|tabular|syntax|condition|loop|iterate|assign|set\s+\w+\s+to|let\s+\w+|var\s+\w+|\w+\[\w+\]|amp_enabled_flag|part_mode|cu_skip_flag|pred_mode_flag|merge_idx|PART_\w+|MODE_\w+|pStateIdx|valMps|MinCb\w+|log2CbSize|enabled_flag|disabled|enabled)\b/gi,
   ],
   relative_position: [
-    /\b(left|right|above|below|top|bottom|adjacent|neighbor\w*|boundary|inside|outside|between|within|across|beside|surround\w*|upper|lower|horizontal|vertical|diagonal|position\w*|location|spatial|region|area|edge|corner|center|collocat\w*)\b/gi,
+    /\b(left|right|above|below|top|bottom|adjacent|neighbor\w*|boundary|inside|outside|between|within|across|beside|surround\w*|upper|lower|horizontal|vertical|diagonal|position\w*|location|spatial|region|area|edge|corner|center|collocat\w*|luma sample|picture|top-left|x0|y0|nCbS|nPbW|nPbH)\b/gi,
   ],
   sequence: [
     /\b(first|second|third|1st|2nd|3rd|\d+th|initial\w*|final\w*|last|previous|next|current|prior|subsequent|preceding|following|before|after|order|sequen\w*|serial|consecutive|successive|temporal|timing|earlier|later)\b/gi,

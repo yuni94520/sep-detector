@@ -1145,6 +1145,7 @@
   .db-stat.sep-stat .n { color:var(--low); }
   .db-stat.non-stat .n { color:var(--high); }
   .db-stat.total-stat .n { color:var(--accent); }
+  .db-stat.pending-stat .n { color:var(--text-dim); }
   .db-table-wrap { max-height:240px; overflow-y:auto; }
   .db-table { width:100%; border-collapse:collapse; }
   .db-table th { font-family:var(--font-mono); font-size:9px; font-weight:500; letter-spacing:0.1em; color:var(--text-dim); text-transform:uppercase; padding:6px 10px; border-bottom:1px solid var(--border); text-align:left; position:sticky; top:0; background:var(--surface); }
@@ -1524,6 +1525,7 @@
             <div class="db-stat total-stat"><span class="n" id="dbTotal">0</span><span class="l">總筆數</span></div>
             <div class="db-stat sep-stat">  <span class="n" id="dbSepCnt">0</span><span class="l">SEP</span></div>
             <div class="db-stat non-stat">  <span class="n" id="dbNonCnt">0</span><span class="l">非 SEP</span></div>
+            <div class="db-stat pending-stat"><span class="n" id="dbPendingCnt">0</span><span class="l">待驗證</span></div>
           </div>
           <div class="db-table-wrap">
             <table class="db-table">
@@ -1865,6 +1867,7 @@ async function runDetection() {
     showLoading(false);
     renderResult(result, patentId, claimNum, selectedSpec.chapter + ' ' + selectedSpec.title);
     addHistory(selectedSpec.chapter, patentId, result);
+    autoSaveDetection(patentId, result);
   } catch(err) {
     showLoading(false);
     showToast('分析失敗：' + err.message, true);
@@ -2629,6 +2632,37 @@ function dbSave(db) {
   localStorage.setItem(DB_KEY, JSON.stringify(db));
 }
 
+function autoSaveDetection(patentId, result) {
+  if (!selectedSpec) return;
+  const claim = document.getElementById('claimContent').value.trim();
+  const chapter = selectedSpec.chapter;
+
+  const entry = {
+    id: patentId,
+    claim: claim.substring(0, 500),
+    chapter: chapter,
+    label: null,          // 待人工驗證
+    score: result.score,
+    sims: result.sims || [],
+    verified_at: null,
+    detected_at: new Date().toISOString(),
+    note: ''
+  };
+
+  const db = dbLoad();
+  const existIdx = db.cases.findIndex(c => c.id === patentId && c.chapter === chapter);
+  if (existIdx >= 0) {
+    // 若已有人工驗證紀錄，不覆蓋
+    if (db.cases[existIdx].label !== null && db.cases[existIdx].label !== undefined) return;
+    db.cases[existIdx] = entry;
+  } else {
+    db.cases.push(entry);
+  }
+
+  dbSave(db);
+  renderDbPanel();
+}
+
 function verifyCase(label) {
   if (!_currentResult) { showToast('請先執行分析', true); return; }
 
@@ -2691,9 +2725,9 @@ function rebuildGoldenData() {
     {scores:[0.30,0.20,0.15,0.10,0.08,0.18,0.08,0.05],label:0},
   ];
 
-  // 加入已驗證案例（有 sims 的）
+  // 加入已驗證案例（有 sims 且已人工標記的）
   const verified = db.cases
-    .filter(c => c.sims && c.sims.length === 8)
+    .filter(c => c.sims && c.sims.length === 8 && c.label !== null && c.label !== undefined)
     .map(c => ({ scores: c.sims, label: c.label }));
 
   // 動態更新 GOLDEN_DATA（全域變數）
@@ -2705,9 +2739,10 @@ function renderDbPanel() {
   const db = dbLoad();
   const cases = db.cases || [];
 
-  document.getElementById('dbTotal').textContent  = cases.length;
-  document.getElementById('dbSepCnt').textContent = cases.filter(c => c.label === 1).length;
-  document.getElementById('dbNonCnt').textContent = cases.filter(c => c.label === 0).length;
+  document.getElementById('dbTotal').textContent   = cases.length;
+  document.getElementById('dbSepCnt').textContent  = cases.filter(c => c.label === 1).length;
+  document.getElementById('dbNonCnt').textContent  = cases.filter(c => c.label === 0).length;
+  document.getElementById('dbPendingCnt').textContent = cases.filter(c => c.label === null || c.label === undefined).length;
 
   const tbody = document.getElementById('dbTableBody');
   if (cases.length === 0) {
@@ -2718,16 +2753,24 @@ function renderDbPanel() {
   const labelColors = { 1: 'var(--green)', 0: 'var(--red)' };
   const labelText   = { 1: 'SEP', 0: '非SEP' };
 
-  tbody.innerHTML = [...cases].reverse().map((c, i) => `
+  tbody.innerHTML = [...cases].reverse().map((c, i) => {
+    const hasLabel = c.label === 1 || c.label === 0;
+    const labelHtml = hasLabel
+      ? `<span style="color:${labelColors[c.label]};font-weight:700">${labelText[c.label]}</span>`
+      : `<span style="color:var(--text-dim);font-style:italic">待驗證</span>`;
+    const dateStr = c.verified_at
+      ? c.verified_at.substring(0, 10)
+      : (c.detected_at ? c.detected_at.substring(0, 10) : '—');
+    return `
     <tr>
       <td style="color:var(--accent);font-weight:600">${c.id}</td>
       <td>${c.chapter}</td>
       <td style="color:${c.score >= 70 ? 'var(--high)' : c.score >= 45 ? 'var(--mid)' : 'var(--low)'};font-weight:700">${c.score}</td>
-      <td><span style="color:${labelColors[c.label]};font-weight:700">${labelText[c.label]}</span></td>
-      <td style="color:var(--text-dim)">${c.verified_at ? c.verified_at.substring(0,10) : '—'}</td>
+      <td>${labelHtml}</td>
+      <td style="color:var(--text-dim)">${dateStr}</td>
       <td><button onclick="deleteDbCase(${cases.length - 1 - i})" style="background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;" title="刪除">✕</button></td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
 
 function deleteDbCase(idx) {
@@ -2809,7 +2852,7 @@ function ragBoost(claimText, sims) {
   let bestLabel = -1;
 
   db.cases.forEach(c => {
-    if (!c.claim) return;
+    if (!c.claim || c.label === null || c.label === undefined) return;
     const sim = tfidfSim(claimText.substring(0,300), c.claim.substring(0,300));
     if (sim > maxSim) { maxSim = sim; bestLabel = c.label; }
   });

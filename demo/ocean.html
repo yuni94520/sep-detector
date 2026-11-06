@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>高通 HEVC 魚群</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: full-bleed simulated sea; three instrument panels float over it (top console, left "簡報數字" ledger, right control desk). Single deliberate deep-sea theme. */
+:root{
+  --abyss:#0b2447;
+  --panel:rgba(10,32,64,.84);
+  --line:rgba(140,190,210,.2);
+  --ink:#e6eff3;
+  --dim:#8ea6b2;
+  --qcom:#4fb3ff;      /* Qualcomm */
+  --sams:#ff8e6b;      /* Samsung */
+  --other:#9aa9b4;     /* other licensors */
+  --gold:#ffd166;      /* A∩B anchors / core citations */
+  --sonar:#7fe0d0;
+  --f-display:"Noto Serif TC","Songti TC",serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--abyss);color:var(--ink);font-family:var(--f-body);overflow:hidden}
+#sea{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hud{position:fixed;z-index:2;background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#top{top:calc(10px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:9px 14px}
+.brand{min-width:0}
+.brand h1{margin:0;font-family:var(--f-display);font-weight:900;font-size:1.25rem;letter-spacing:.05em}
+.brand p{margin:1px 0 0;font-size:.7rem;color:var(--dim)}
+.tabs{display:flex;gap:4px;background:rgba(255,255,255,.04);border-radius:8px;padding:3px}
+.tabs button{border:0;background:transparent}
+.tabs button[aria-pressed="true"]{background:rgba(127,224,208,.16);color:var(--sonar)}
+button{font:500 .8rem var(--f-body);color:var(--ink);background:rgba(127,224,208,.07);border:1px solid var(--line);border-radius:7px;padding:6px 11px;cursor:pointer;white-space:nowrap}
+button:hover{color:var(--sonar);border-color:var(--sonar)}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--sonar);outline-offset:2px}
+.clock{display:flex;align-items:center;gap:10px;flex:1 1 300px;min-width:0}
+.yr{font-family:var(--f-mono);font-size:1.6rem;color:var(--sonar);font-variant-numeric:tabular-nums;line-height:1;min-width:4.5ch}
+.yr small{display:block;font-size:.58rem;color:var(--dim);letter-spacing:.12em;margin-top:3px}
+.yr.ghost{color:var(--gold)}
+.clock input{flex:1;min-width:0;accent-color:var(--sonar)}
+#ledger{left:max(16px,env(safe-area-inset-left,0px));top:calc(84px + env(safe-area-inset-top,0px));width:250px;max-height:calc(100% - 180px);overflow:auto;padding:12px 13px}
+#desk{right:max(16px,env(safe-area-inset-right,0px));top:calc(84px + env(safe-area-inset-top,0px));width:300px;max-height:calc(100% - 180px);overflow:auto;padding:12px 13px}
+h2{margin:0 0 8px;font-size:.66rem;letter-spacing:.14em;color:var(--dim);font-weight:700}
+h3{margin:12px 0 6px;font-size:.78rem;font-weight:700}
+.big{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.big div{background:rgba(255,255,255,.03);border-radius:7px;padding:7px 8px}
+.big b{display:block;font-family:var(--f-mono);font-size:1.05rem;font-weight:500;color:var(--qcom);font-variant-numeric:tabular-nums}
+.big span{font-size:.68rem;color:var(--dim);line-height:1.35;display:block}
+.key{display:grid;grid-template-columns:14px 1fr auto;gap:7px;align-items:center;font-size:.78rem;padding:2px 0}
+.key i{width:12px;height:7px;border-radius:7px 3px 3px 7px;display:block}
+.key em{font-style:normal;font-family:var(--f-mono);color:var(--dim);font-variant-numeric:tabular-nums}
+.note{font-size:.72rem;color:var(--dim);line-height:1.6;margin:8px 0 0}
+.phases{display:grid;gap:5px}
+.ph{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;text-align:left;padding:7px 9px}
+.ph[aria-pressed="true"]{border-color:var(--sonar);background:rgba(127,224,208,.12)}
+.ph .n{font-family:var(--f-mono);color:var(--dim);font-size:.7rem}
+.ph .c{font-family:var(--f-mono);color:var(--sonar);font-variant-numeric:tabular-nums}
+.ph .t{font-size:.76rem;line-height:1.35;white-space:normal}
+textarea{width:100%;min-height:110px;resize:vertical;box-sizing:border-box;background:rgba(0,0,0,.25);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:8px;font:400 .78rem/1.5 var(--f-body)}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.match{display:grid;grid-template-columns:1fr auto;gap:4px 8px;font-size:.78rem;margin-top:8px}
+.bar{grid-column:1/-1;height:4px;border-radius:2px;background:rgba(255,255,255,.07);overflow:hidden}
+.bar span{display:block;height:100%;background:var(--sonar)}
+#prov{left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:6px 12px;font-size:.7rem;color:var(--dim);max-width:calc(100% - 32px);text-align:center}
+#tip{position:fixed;z-index:3;pointer-events:none;background:rgba(8,26,54,.93);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:.74rem;line-height:1.45;max-width:240px}
+#tip b{font-family:var(--f-mono);color:var(--sonar);font-weight:500}
+#ledgerBtn{display:none!important}
+.fold{all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;box-sizing:border-box;font-size:.72rem;letter-spacing:.12em;color:var(--ink);font-weight:700}
+.fold:focus-visible{outline:2px solid var(--sonar);outline-offset:3px;border-radius:4px}
+.fold::after{content:"▾";color:var(--sonar);transition:transform .2s}
+.hud.folded .fold::after{transform:rotate(-90deg)}
+.hud.folded .foldBody{display:none}
+.hud.folded{width:auto!important;max-height:none!important;padding:8px 12px!important}
+.foldBody{margin-top:10px}
+#eco{left:50%;transform:translateX(-50%);bottom:calc(46px + env(safe-area-inset-bottom,0px));width:min(900px,calc(100% - 32px));padding:12px 14px;box-sizing:border-box}
+.ecoHead{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-start;justify-content:space-between}
+.ecoSteps{grid-template-columns:repeat(4,minmax(0,1fr));flex:1 1 520px;min-width:0}
+.ecoSteps .ph{grid-template-columns:auto 1fr}
+.ecoBase{display:flex;flex-direction:column;gap:6px;font-size:.7rem;color:var(--dim)}
+.perc{display:flex;align-items:center;gap:4px;font-size:.74rem;color:var(--dim)}
+.perc input{width:6.5em;background:rgba(0,0,0,.3);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font:500 .8rem var(--f-mono)}
+.ecoGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+.ecoGrid .m{background:rgba(255,255,255,.035);border-radius:8px;padding:9px 11px;min-width:0}
+.ecoGrid span{font-size:.68rem;letter-spacing:.1em;color:var(--dim)}
+.ecoGrid b{display:block;font:500 1.55rem/1.2 var(--f-mono);color:var(--sonar);font-variant-numeric:tabular-nums;margin-top:2px;overflow-wrap:anywhere}
+.ecoGrid small{display:block;font-size:.72rem;color:var(--dim);line-height:1.45;margin-top:2px}
+#eBars{margin-top:10px;display:none;gap:8px}
+.ecoGrid .recall{background:#cdeeff;border:1px solid #9fd6f5}
+.ecoGrid .recall span,.ecoGrid .recall small{color:#24506b}
+.ecoGrid .recall b{color:#06324d}
+.ecoGrid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.poolcost{margin-top:10px;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;padding:8px 11px;border-radius:8px;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.3);font-size:.76rem;color:var(--dim)}
+.poolcost b{font:500 1.05rem var(--f-mono);color:#ff8a8a;font-variant-numeric:tabular-nums}
+.brow{display:grid;grid-template-columns:7.5em 1fr;gap:8px;align-items:center;font-size:.74rem}
+.btrack{display:grid;gap:3px}
+.bline{display:flex;align-items:center;gap:8px;min-width:0}
+.bline i{display:block;height:10px;border-radius:3px;min-width:3px;transition:width 1.2s cubic-bezier(.2,.8,.2,1)}
+.bline em{font-style:normal;font-family:var(--f-mono);font-size:.72rem;color:var(--ink);white-space:nowrap}
+@media (max-width:860px){.ecoGrid,.ecoGrid.four{grid-template-columns:1fr}.ecoGrid b{font-size:1.15rem}.ecoSteps{grid-template-columns:1fr 1fr}#eco{max-height:52vh;overflow:auto;bottom:calc(40px + env(safe-area-inset-bottom,0px))}}
+@media (max-width:860px){
+  #prov{font-size:.62rem;padding:4px 10px}
+  
+  
+  #desk{top:auto;bottom:calc(64px + env(safe-area-inset-bottom,0px));width:auto;left:max(16px,env(safe-area-inset-left,0px));max-height:34vh}
+  .brand h1{font-size:1.05rem}.yr{font-size:1.25rem}
+}
+</style>
+
+</head>
+<body>
+<canvas id="sea" aria-label="高通 HEVC 標準必要專利魚群模擬"></canvas>
+
+<header class="hud" id="top">
+  <div class="brand"><h1>高通 HEVC 魚群</h1><p>一條魚＝一個專利家族 · 顏色＝權利人 · <a href="../index.html" style="color:#7fe0d0">← 回檢測工具</a></p></div>
+  <div class="tabs" role="group" aria-label="檢視模式">
+    <button type="button" id="mOcean" aria-pressed="true">四大洋全景</button>
+    <button type="button" id="mVortex" aria-pressed="false">池子漩渦</button>
+    <button type="button" id="mSaturn" aria-pressed="false">土星錨點</button>
+    <button type="button" id="mNet" aria-pressed="false">撒網 vs 燈塔</button>
+    <button type="button" id="mEco" aria-pressed="false">經濟效益</button>
+  </div>
+  <div class="clock">
+    <div class="yr" id="yrBox"><span id="yrTxt">2020</span><small id="yrLbl">高通申請年</small></div>
+    <button type="button" id="play">▶ 播放 2008→2023</button>
+    <input type="range" id="yr" min="2008" max="2023" step="1" value="2020" aria-label="年份">
+  </div>
+  <div class="tabs" role="group" aria-label="速度" id="speeds"><button type="button" data-s="1" aria-pressed="false">1×</button><button type="button" data-s="2" aria-pressed="true">2×</button><button type="button" data-s="3" aria-pressed="false">3×</button></div>
+  <button type="button" id="ledgerBtn">簡報數字</button>
+</header>
+
+<aside class="hud" id="ledger">
+  <h2>簡報數字（給組長的高通名單）</h2>
+  <div class="big">
+    <div><b>3,044</b><span>高通獨立專利家族（不含子案）</span></div>
+    <div><b>1,258</b><span>§8.5.3.3 檢索筆數</span></div>
+    <div><b>18.05%</b><span>PAI 價值權重，全球第一</span></div>
+    <div><b>13.6</b><span>平均被引次數；最高單件 727（仿射 MP）</span></div>
+  </div>
+  <h3>池子母數漏斗</h3>
+  <div class="key"><i style="background:var(--other)"></i><span>原始筆數</span><em>42,048</em></div>
+  <div class="key"><i style="background:var(--other)"></i><span>有效專利家族</span><em>19,547</em></div>
+  <div class="key"><i style="background:var(--other)"></i><span>54 國校正後可分析母數</span><em>15,735</em></div>
+  <h3>漩渦中的權利人</h3>
+  <div class="key"><i style="background:var(--qcom)"></i><span>Qualcomm</span><em>3,044</em></div>
+  <div class="key"><i style="background:var(--sams)"></i><span>Samsung（母數推估基礎）</span><em>2,621</em></div>
+  <div class="key"><i style="background:var(--other)"></i><span>其他權利人（母數相減）</span><em>10,070</em></div>
+  <h3>高通技術章節（漩渦旋臂）</h3>
+  <div id="armKeys"></div>
+  <p class="note">2011–2014 為核心布局期（1,804 筆，59%），2012 單年 494 件為峰值。</p>
+</aside>
+
+<aside class="hud" id="desk">
+  <div id="deskVortex">
+    <h2>放入本案比對</h2>
+    <textarea id="claims" aria-label="貼上請求項">一種視訊解碼方法，包含：從位元串流解析一切片的編碼樹單元，以四叉樹將編碼單元分割為多個預測單元；建立合併候選列表，並依空間及時間相鄰區塊導出運動向量預測候選…</textarea>
+    <div class="row"><button type="button" id="drop">放入本案魚</button><button type="button" id="clearCase">移除</button></div>
+    <div id="matchOut"><p class="note">貼上請求項後按「放入本案魚」，白色的本案魚會依關鍵字對標 HEVC 章節，游進最接近的高通旋臂。</p></div>
+    <h3>推演（純數學外推）</h3>
+    <p class="note" id="fcNote"></p>
+  </div>
+  <div id="deskNet" hidden>
+    <h2>撈魚比較 · 以往檢索 vs 土星燈塔</h2>
+    <div class="phases" id="netSteps"></div>
+    <div class="big" style="margin-top:10px">
+      <div><b id="nc1">0</b><span id="nl1">網中魚數</span></div>
+      <div><b id="nc2">0</b><span id="nl2">可辨識的真 SEP</span></div>
+    </div>
+    <p class="note" id="netNote"></p>
+    <div class="row"><button type="button" id="netReplay">重新撈一次</button></div>
+  </div>
+  <div id="deskSaturn" hidden>
+    <h2>土星錨點輻射法 · 階段</h2>
+    <div class="phases" id="phases"></div>
+    <div class="key" style="margin-top:10px"><i style="background:var(--qcom)"></i><span>核心球體 PQAI 語意對標</span><em>1,300</em></div>
+    <div class="key"><i style="background:#9fd8ff"></i><span>衛星環 B 引用年化 Top10%</span><em id="kB"></em></div>
+    <div class="key"><i style="background:#b9a6ff"></i><span>外環 A JCT-VC 提案人</span><em id="kA"></em></div>
+    <div class="key"><i style="background:var(--gold)"></i><span>A∩B 高信心錨點</span><em>550</em></div>
+    <div class="key"><i style="background:#56636c"></i><span>關鍵字 / IPC 雜訊</span><em>1,956</em></div>
+    <p class="note" id="phaseNote"></p>
+  </div>
+</aside>
+
+<section class="hud" id="eco" hidden aria-live="polite">
+  <div class="ecoHead">
+    <div class="phases ecoSteps" id="ecoSteps"></div>
+    <div class="ecoBase"><span>驗證母數</span><div class="tabs" role="group" aria-label="驗證母數" id="ecoBase"></div>
+      <label class="perc" for="ecoPer">人工單件 $<input id="ecoPer" type="number" min="100" step="500" value="6000" inputmode="numeric"></label></div>
+  </div>
+  <div class="ecoGrid">
+    <div class="m"><span id="eTl">耗時</span><b id="eT">—</b><small id="eTs"></small></div>
+    <div class="m"><span id="eCl">驗證費用（USD）</span><b id="eC">—</b><small id="eCs"></small></div>
+    <div class="m"><span id="eAl">準確率</span><b id="eA">—</b><small id="eAs"></small></div>
+    <div class="m recall" id="eR" style="display:none"><span>召回率</span><b>≈ 83%</b><small>三星 2,621 件中 AI 找回 2,179 件；由精確率 88% 與 F1 85.5% 換算</small></div>
+  </div>
+  <div id="eBars" hidden></div>
+  <div class="poolcost" id="poolCost"></div>
+  <p class="note" id="eNote"></p>
+</section>
+<div class="hud" id="prov">模擬個體依簡報統計分布生成，非真實專利清單；匯入家族清單後可換成真實魚群。</div>
+<div id="tip" hidden></div>
+
+<script>
+/* ======== figures from 「給組長的高通名單」/「高通SEP清單、方法論」 ======== */
+const YEARS=[2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020];
+const PER_YEAR=[30,20,100,450,494,430,405,305,215,200,160,110,25];             // sums to 2,944 in the deck chart
+const ARMS=[ // section, label, deck count (overlapping search hits; used as proportions)
+  ["6B","§7.3.6-8 Slice/CU 分割",1700],["PNS","種子清單篩選",850],["2B","§8.5.3 AMVP",283],
+  ["7A","§8.1-8.3 POC+RPS",200],["2A","§8.5.3 Merge",126],["1A","§8.4.1-3 量化參數",100]];
+const CITE_BINS=[[1,10,.509],[11,30,.245],[31,50,.108],[51,70,.07],[71,200,.068]];
+const ARM_KW={
+  "6B":["slice","coding unit","coding tree","ctu","quadtree","quad-tree","partition","split","切片","編碼單元","编码单元","編碼樹","编码树","四叉樹","四叉树","分割"],
+  "2B":["amvp","motion vector predictor","motion vector prediction","mvp","預測候選","运动向量预测","運動向量預測","候選列表","候选列表"],
+  "7A":["picture order count","poc","reference picture set","rps","reference picture","參考圖像","参考图像","參考圖片","圖像順序","图像顺序"],
+  "2A":["merge","merging","合併","合并"],
+  "1A":["quantization parameter","quantisation","qp","delta qp","量化參數","量化参数","量化"]};
+
+/* ======== deterministic random ======== */
+let seed=20260105;const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
+const pickW=(arr,wf)=>{const t=arr.reduce((s,a)=>s+wf(a),0);let r=rnd()*t;for(const a of arr){r-=wf(a);if(r<=0)return a}return arr[arr.length-1]};
+
+/* ======== canvas ======== */
+const cv=document.getElementById('sea');let ctx=cv.getContext('2d');const MAIN=ctx;let W=0,H=0,DPR=1;
+const trail=document.createElement('canvas'),trx=trail.getContext('2d');let SPEED=2,simT=0,lastNow=0;
+function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;MAIN.setTransform(DPR,0,0,DPR,0,0);trail.width=W*DPR;trail.height=H*DPR;trx.setTransform(DPR,0,0,DPR,0,0);layout();const hb=document.getElementById('top').getBoundingClientRect().bottom;document.getElementById('ledger').style.top=(hb+8)+'px';if(W>=860)document.getElementById('desk').style.top=(hb+8)+'px';else document.getElementById('desk').style.top=''}
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ======== vortices ======== */
+const COL={q:"#2f9bff",s:"#ff4f6d",o:"#a99cff",gold:"#ffd166",B:"#3ddcff",A:"#c77dff",noise:"#56636c",case:"#ffffff"};
+const ARM_COL={"6B":"#00e5ff","PNS":"#8c7bff","2B":"#3d8bff","7A":"#b2ff59","2A":"#ffe14d","1A":"#1de9b6"};
+const S_COLS=["#ff4f6d","#ff7a59","#ff2d95","#ffa07a"],O_COLS=["#c792ea","#82aaff","#89ddff","#f78cff","#7fdbca"];
+const VX={q:{n:3044,label:"Qualcomm",col:COL.q},s:{n:2621,label:"Samsung",col:COL.s},o:{n:10070,label:"其他權利人",col:COL.o}};
+const OTHER_PER_FISH=8; // draw 1 fish per 4 families for 「其他權利人」 to keep the page fluid
+function layout(){
+  const m=Math.min(W,H),narrow=W<860;
+  const L=narrow?0:280,Rr=narrow?W:W-330,top=narrow?120:90,bot=narrow?H*.62:H-40;
+  const aw=Rr-L,ah=bot-top;
+  const base=Math.min(aw/(narrow?2.6:3.7),ah/(narrow?3.2:2.6));
+  VX.q.R=base;VX.s.R=base*Math.sqrt(2621/3044)*.9;VX.o.R=base*1.05;
+  if(narrow){VX.q.x=W*.32;VX.q.y=top+ah*.3;VX.s.x=W*.74;VX.s.y=top+ah*.32;VX.o.x=W*.52;VX.o.y=top+ah*.76}
+  else{VX.q.x=L+aw*.28;VX.q.y=top+ah*.5;VX.s.x=L+aw*.74;VX.s.y=top+ah*.25;VX.o.x=L+aw*.72;VX.o.y=top+ah*.76}
+  SAT.x=narrow?W*.5:L+aw*.5;SAT.y=narrow?H*.36:top+ah*.5;SAT.R=Math.min(aw/6.2,ah/2.2)*(narrow?.9:1);
+}
+const SAT={x:0,y:0,R:100};
+
+/* ======== build fish ======== */
+const fish=[];
+const armTotal=ARMS.reduce((s,a)=>s+a[2],0);
+let armStart=0;const ARM_SECT={};
+ARMS.forEach(([k,l,c])=>{ARM_SECT[k]={a0:armStart,a1:armStart+c/armTotal*6.283,label:l,count:c};armStart+=c/armTotal*6.283});
+// year pool for Qualcomm: deck chart (2,944) + 100 spread over 2011–2014 to reach 3,044 families
+const yearPool=[];YEARS.forEach((y,i)=>{for(let k=0;k<PER_YEAR[i];k++)yearPool.push(y)});
+for(let k=0;k<100;k++)yearPool.push(2011+(k%4));
+for(let i=yearPool.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[yearPool[i],yearPool[j]]=[yearPool[j],yearPool[i]]}
+function citeSample(){const b=pickW(CITE_BINS,x=>x[2]);return Math.round(b[0]+Math.pow(rnd(),b[1]>70?2.2:1)*(b[1]-b[0]))}
+function mk(o){return Object.assign({x:W/2+(rnd()-.5)*W,y:H/2+(rnd()-.5)*H,vx:0,vy:0,ph:rnd()*6.28,alpha:0,r0:0,th:rnd()*6.28},o)}
+// Qualcomm
+const qFish=[];
+for(let i=0;i<3044;i++){
+  const arm=pickW(ARMS,a=>a[2])[0],cites=citeSample();
+  const f=mk({who:"q",arm,year:yearPool[i],cites,r0:Math.pow(rnd(),.75),jit:rnd()});
+  qFish.push(f);fish.push(f)}
+// one standout family: highest single citation 727 (affine motion prediction)
+qFish.sort((a,b)=>b.cites-a.cites);qFish[0].cites=727;qFish[0].star="仿射 MP 家族（最高被引 727）";qFish[0].arm="2B";qFish[0].year=2016;
+// Saturn roles: 1,300 core / 600 A-only / 594 B-only / 550 A∩B  (=3,044)
+{const order=[...qFish].sort(()=>rnd()-.5);
+ order.forEach((f,i)=>{f.role=i<1300?"core":i<1900?"A":i<2494?"B":"AB"})}
+// Samsung & others (no year data in the deck)
+for(let i=0;i<2621;i++)fish.push(mk({who:"s",r0:Math.pow(rnd(),.7),cites:citeSample(),jit:rnd()}));
+for(let i=0;i<Math.round(10070/OTHER_PER_FISH);i++)fish.push(mk({who:"o",r0:Math.pow(rnd(),.65),cites:citeSample(),jit:rnd()}));
+// keyword/IPC look-alikes that the method filters out (Phase 0: ~5,000 total)
+const noise=[];for(let i=0;i<1956;i++){const f=mk({who:"n",r0:rnd(),role:"noise",cites:citeSample()});noise.push(f);fish.push(f)}
+qFish.forEach(f=>{const s=ARM_SECT[f.arm];f.armA=s.a0+rnd()*(s.a1-s.a0)});
+
+/* ======== forecast: log-linear fit on 2015–2019 (2020 excluded: 18-month publication lag) ======== */
+const FIT_Y=[2015,2016,2017,2018,2019],FIT_V=[305,215,200,160,110];
+const fit=(()=>{const n=5,xs=FIT_Y.map(y=>y-2015),ys=FIT_V.map(v=>Math.log(v));const mx=xs.reduce((a,b)=>a+b)/n,my=ys.reduce((a,b)=>a+b)/n;
+  let sxy=0,sxx=0;xs.forEach((x,i)=>{sxy+=(x-mx)*(ys[i]-my);sxx+=(x-mx)**2});const b=sxy/sxx,a=my-b*mx;return {a,b,at:y=>Math.exp(a+b*(y-2015))}})();
+const FC={2021:Math.round(fit.at(2021)),2022:Math.round(fit.at(2022)),2023:Math.round(fit.at(2023))};
+const ghosts=[];[2021,2022,2023].forEach(y=>{for(let i=0;i<FC[y];i++){const f=mk({who:"q",ghost:true,year:y,arm:pickW(ARMS.filter(a=>a[0]!=="PNS"),a=>a[2])[0],r0:.85+rnd()*.35,cites:0,jit:rnd()});
+  const s=ARM_SECT[f.arm];f.armA=s.a0+rnd()*(s.a1-s.a0);ghosts.push(f);fish.push(f)}});
+document.getElementById('fcNote').innerHTML=
+ `以 2015–2019 年高通申請量做對數線性迴歸（2020 年因公開延遲不納入），年衰減率 ${Math.round((1-Math.exp(fit.b))*100)}%。外推 2021 / 2022 / 2023 年約 <b>${FC[2021]} / ${FC[2022]} / ${FC[2023]}</b> 個新家族，播放到 2021 後以金色虛線魚顯示。這是動量推演，不是預測事實。`;
+
+/* ======== state ======== */
+let mode="ocean",year=2020,phase=4,caseFish=null,hover=null,t0=performance.now();
+const vis=f=>{
+  if(mode==="saturn"){
+    if(f.who==="n")return phase<=1&&(phase===0||f.jit<.204); // 400 of 1,956 remain at Phase 1 (1,700 total)
+    if(f.who!=="q"||f.ghost)return false;
+    if(phase===0)return true;if(phase===1)return f.role==="core"||(f.role!=="core"&&f.jit<0);
+    if(phase===2)return f.role==="core";if(phase===3)return f.role==="core"||f.jit<.69; return true}
+  if(f.who==="n")return false;
+  if(f.who==="q"){if(f.ghost)return year>=f.year;return f.year<=Math.min(year,2020)}
+  return true};
+
+/* ======== motion ======== */
+function target(f,t){
+  if(mode==="saturn"&&f.who!=="n"){
+    const R=SAT.R;
+    if(f.role==="core"||phase<=1){ // sphere: orbit on a tilted great circle
+      if(!f.u){const a=rnd()*6.28,b=Math.acos(2*rnd()-1);f.u=[Math.cos(a)*Math.sin(b),Math.sin(a)*Math.sin(b),Math.cos(b)];
+        let v=[-f.u[1],f.u[0],0];const l=Math.hypot(...v)||1;v=v.map(c=>c/l);f.v=[f.u[1]*v[2]-f.u[2]*v[1],f.u[2]*v[0]-f.u[0]*v[2],f.u[0]*v[1]-f.u[1]*v[0]];f.rr=.35+.65*Math.cbrt(rnd())}
+      const a=f.th+t*.00035*(1.3-f.rr*.5),r=R*f.rr*(phase===0?1.9:phase===1?1.25:1);
+      const p=[f.u[0]*Math.cos(a)+f.v[0]*Math.sin(a),f.u[1]*Math.cos(a)+f.v[1]*Math.sin(a),f.u[2]*Math.cos(a)+f.v[2]*Math.sin(a)];
+      f.z=p[2];return [SAT.x+p[0]*r,SAT.y+p[1]*r*.92]}
+    const ring=f.role==="B"?1.65:f.role==="A"?2.35:2.0;const spread=f.role==="AB"?.12:.22;
+    const a=f.th+t*.00022*(2.6-ring);const r=R*(ring+(f.jit-.5)*spread*2);
+    f.z=Math.sin(a);return [SAT.x+Math.cos(a)*r,SAT.y+Math.sin(a)*r*.27-Math.cos(a)*r*.06]}
+  if(f.who==="n"){const r=SAT.R*(2.4+f.r0*1.6);const a=f.th+t*.0002;f.z=0;return [SAT.x+Math.cos(a)*r*1.1,SAT.y+Math.sin(a)*r*.62]}
+  const V=VX[f.who];f.z=0;
+  if(f.who==="q"){ // arms: each HEVC section is a spiral arm rotating with the vortex
+    const r=V.R*(.12+f.r0*.88)*(f.ghost?1:1);const twist=Math.log(.12+f.r0*.88+.02)*1.25;
+    const a=f.armA+twist+t*.00018+(f.jit-.5)*.12;return [V.x+Math.cos(a)*r,V.y+Math.sin(a)*r*.86]}
+  const r=V.R*(.1+f.r0*.9),a=f.th+t*.00028/(.35+f.r0)+Math.log(.1+f.r0)*1.6*(f.who==="s"?1:-1);
+  return [V.x+Math.cos(a)*r,V.y+Math.sin(a)*r*.86]}
+function step(t){
+  for(const f of fish){
+    const on=vis(f);f.alpha+=((on?1:0)-f.alpha)*.05;if(f.alpha<.01&&!on)continue;
+    const [tx,ty]=target(f,t);
+    const k=f.born?.02:.075;f.vx=f.vx*.8+(tx-f.x)*k;f.vy=f.vy*.8+(ty-f.y)*k;
+    f.ph+=.15;f.x+=f.vx+Math.cos(f.ph*.21+f.jit*9)*.15;f.y+=f.vy+Math.sin(f.ph*.17+f.jit*7)*.15}
+  if(caseFish){const tgt=caseFish.tgt?target(caseFish.tgt,t):[VX.q.x+VX.q.R*1.3,VX.q.y];caseFish.vx=caseFish.vx*.9+(tgt[0]-caseFish.x)*.02;caseFish.vy=caseFish.vy*.9+(tgt[1]-caseFish.y)*.02;caseFish.x+=caseFish.vx;caseFish.y+=caseFish.vy;caseFish.ph+=.2}
+}
+
+/* ======== draw ======== */
+function fishPath(f,s){
+  const ang=Math.atan2(f.vy,f.vx)||0,c=Math.cos(ang),sn=Math.sin(ang);const wag=Math.sin(f.ph*.9)*s*.5;
+  const P=(x,y)=>[f.x+x*c-y*sn,f.y+x*sn+y*c];
+  const a=P(s*1.6,0),b=P(-s*.6,-s*.62),d=P(-s*.6,s*.62),t1=P(-s*1.9,-s*.7+wag),t2=P(-s*1.9,s*.7+wag),m=P(-s*1.1,0);
+  ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.lineTo(m[0],m[1]);ctx.lineTo(t1[0],t1[1]);ctx.lineTo(t2[0],t2[1]);ctx.lineTo(m[0],m[1]);ctx.lineTo(d[0],d[1]);ctx.closePath()}
+const sizeOf=f=>f.who==="o"?2.1:(1.7+Math.min(Math.log10(f.cites+1),2.9)*.75);
+function colorOf(f){
+  if(f.who==="n")return COL.noise;
+  if(f.who==="q"){if(mode==="saturn"&&f.role!=="core")return f.role==="AB"?COL.gold:f.role==="A"?COL.A:COL.B;return ARM_COL[f.arm]||COL.q}
+  if(f.who==="s")return S_COLS[Math.floor(f.jit*S_COLS.length)];
+  return O_COLS[Math.floor(f.jit*O_COLS.length)]}
+function drawBatch(list,alphaMul){
+  const groups=new Map();
+  for(const f of list){if(f.alpha<.02)continue;const key=colorOf(f)+'|'+(f.ghost?'g':'')+'|'+Math.round(f.alpha*alphaMul*5);
+    (groups.get(key)||groups.set(key,[]).get(key)).push(f)}
+  for(const[key,arr]of groups){const[col,g,a]=key.split('|');ctx.globalAlpha=Math.min(1,a/5);
+    ctx.beginPath();arr.forEach(f=>fishPath(f,sizeOf(f)));
+    if(g){ctx.setLineDash([2,2]);ctx.strokeStyle=COL.gold;ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([])}else{ctx.fillStyle=col;ctx.fill()}}
+  ctx.globalAlpha=1}
+function drawVortexBg(t){
+  for(const k of["o","s","q"]){const V=VX[k];
+    const g=ctx.createRadialGradient(V.x,V.y,0,V.x,V.y,V.R*1.15);
+    g.addColorStop(0,hexA(V.col,.22));g.addColorStop(.55,hexA(V.col,.06));g.addColorStop(1,hexA(V.col,0));
+    ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(V.x,V.y,V.R*1.15,V.R*1.15*.86,0,0,6.28);ctx.fill();
+    // spiral current lines
+    ctx.strokeStyle=hexA(V.col,.16);ctx.lineWidth=1;
+    for(let arm=0;arm<5;arm++){ctx.beginPath();for(let s=0;s<=60;s++){const u=s/60;const r=V.R*(.06+u*1.02);
+      const a=arm/5*6.283+Math.log(.06+u)*1.4*(k==="o"?-1:1)+t*.00025*(k==="q"?.72:1);
+      const x=V.x+Math.cos(a)*r,y=V.y+Math.sin(a)*r*.86;s?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.stroke()}
+    // label
+    const shown=k==="q"?fish.filter(f=>f.who==="q"&&!f.ghost&&f.year<=Math.min(year,2020)).length:V.n;
+    label(V.x,V.y-V.R*.86-16,V.label,(k==="o"?"10,070 族 · 1 條＝8 族":shown.toLocaleString()+" 族"),V.col)}
+  // arm labels for Qualcomm
+  const V=VX.q;ctx.font="500 11px 'Noto Sans TC',sans-serif";ctx.textAlign="center";
+  ARMS.forEach(([k])=>{const s=ARM_SECT[k],a=(s.a0+s.a1)/2+Math.log(1.02)*1.25+t*.00018;const r=V.R*1.08;
+    const x=V.x+Math.cos(a)*r,y=V.y+Math.sin(a)*r*.86;ctx.fillStyle="rgba(9,30,62,.7)";const w=ctx.measureText(k).width+10;ctx.fillRect(x-w/2,y-9,w,16);ctx.fillStyle="#cfe9ff";ctx.fillText(k,x,y+3)})}
+function drawSaturnBg(){
+  const R=SAT.R;ctx.strokeStyle="rgba(159,216,255,.18)";ctx.lineWidth=1;
+  [[1.65,"衛星環 B · 引用網絡"],[2.35,"外環 A · JCT-VC 提案人"]].forEach(([k,l])=>{ctx.beginPath();ctx.ellipse(SAT.x,SAT.y,R*k,R*k*.27,-.06,0,6.28);ctx.stroke();
+    if(phase>=3){ctx.font="500 11px 'Noto Sans TC',sans-serif";ctx.fillStyle="#9fb6c2";ctx.textAlign="left";ctx.fillText(l,SAT.x+R*k*.72,SAT.y+R*k*.27*.75+14)}});
+  const g=ctx.createRadialGradient(SAT.x,SAT.y,0,SAT.x,SAT.y,R*1.3);g.addColorStop(0,"rgba(79,179,255,.22)");g.addColorStop(1,"rgba(79,179,255,0)");ctx.fillStyle=g;ctx.beginPath();ctx.arc(SAT.x,SAT.y,R*1.3,0,6.28);ctx.fill();
+  const n=fish.filter(f=>vis(f)&&f.who==="q").length+fish.filter(f=>vis(f)&&f.who==="n").length;
+  label(SAT.x,SAT.y-R*(phase===0?2.1:1.45)-14,PHASES[phase][1],n.toLocaleString()+" 條",COL.q)}
+function label(x,y,title,sub,col){ctx.textAlign="center";ctx.font="700 14px 'Noto Sans TC',sans-serif";const w=Math.max(ctx.measureText(title).width,ctx.measureText(sub).width*.85)+20;
+  ctx.fillStyle="rgba(9,30,62,.78)";ctx.fillRect(x-w/2,y-16,w,36);ctx.fillStyle=col;ctx.fillRect(x-w/2,y-16,3,36);
+  ctx.fillStyle="#e6eff3";ctx.fillText(title,x,y);ctx.font="400 11px 'IBM Plex Mono',monospace";ctx.fillStyle="#8ea6b2";ctx.fillText(sub,x,y+14)}
+function fadeTrail(){trx.globalCompositeOperation="destination-out";trx.fillStyle=`rgba(0,0,0,${SPEED>=3?.34:.26})`;trx.fillRect(0,0,W,H);trx.globalCompositeOperation="source-over"}
+const STREAMS=[];for(let i=0;i<1100;i++){const k=i<520?"q":i<800?"s":"o";STREAMS.push({k,u:Math.random(),arm:Math.floor(Math.random()*5),off:(Math.random()-.5)*.25,sp:.6+Math.random()*.8,
+  col:k==="q"?Object.values(ARM_COL)[i%6]:k==="s"?S_COLS[i%4]:O_COLS[i%5]})}
+function drawStreams(t){const by=new Map();
+  for(const p of STREAMS){p.u-=.0016*p.sp*SPEED;if(p.u<0)p.u=1;const V=VX[p.k];const r=V.R*(.06+p.u*1.05);
+    const a=p.arm/5*6.283+p.off+Math.log(.06+p.u)*1.4*(p.k==="o"?-1:1)+t*.00025*(p.k==="q"?.72:1);
+    (by.get(p.col)||by.set(p.col,[]).get(p.col)).push([V.x+Math.cos(a)*r,V.y+Math.sin(a)*r*.86,1+(1-p.u)*1.4])}
+  for(const[col,arr]of by){ctx.fillStyle=col;ctx.globalAlpha=.85;ctx.beginPath();arr.forEach(([x,y,z])=>{ctx.moveTo(x+z,y);ctx.arc(x,y,z,0,6.283)});ctx.fill()}ctx.globalAlpha=1}
+function hexA(h,a){const n=parseInt(h.slice(1),16);return `rgba(${n>>16},${n>>8&255},${n&255},${a})`}
+function frame(now){
+  const dtt=Math.min(50,now-(lastNow||now));lastNow=now;const sp=SPEED*(reduce?.3:1);
+  if(mode==="net"){NET.tt+=dtt*sp;netFrame(now);requestAnimationFrame(frame);return}
+  if(mode==="ocean"){OC.tt+=dtt*sp;ocFrame(OC.tt,now);requestAnimationFrame(frame);return}
+  if(mode==="eco"){ECO.tt+=dtt*sp;ecoFrame(ECO.tt,dtt*sp);requestAnimationFrame(frame);return}
+  simT+=dtt*sp;const t=simT;step(t);
+  ctx.fillStyle="#0b2447";ctx.fillRect(0,0,W,H);
+  if(mode==="vortex")drawVortexBg(t);else drawSaturnBg();
+  fadeTrail();ctx=trx;ctx.globalCompositeOperation="lighter";
+  if(mode==="vortex")drawStreams(t);
+  if(mode==="saturn"){const back=[],front=[];for(const f of fish)((f.z??0)<0?back:front).push(f);drawBatch(back,.55);drawBatch(front,1)}
+  else drawBatch(fish,1);
+  ctx.globalCompositeOperation="source-over";ctx=MAIN;ctx.globalCompositeOperation="lighter";ctx.drawImage(trail,0,0,W,H);ctx.globalCompositeOperation="source-over";
+  // star family
+  const st=qFish[0];if(st.alpha>.3){ctx.strokeStyle=COL.gold;ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(st.x,st.y,9+Math.sin(now*.004)*2,0,6.28);ctx.stroke()}
+  if(caseFish&&mode==="vortex"){ctx.save();ctx.shadowColor="#fff";ctx.shadowBlur=16;ctx.fillStyle="#fff";ctx.beginPath();fishPath(caseFish,6);ctx.fill();ctx.restore();
+    ctx.font="700 12px 'Noto Sans TC',sans-serif";ctx.fillStyle="#fff";ctx.textAlign="left";ctx.fillText("本案",caseFish.x+12,caseFish.y-8)}
+  if(hover){ctx.strokeStyle="#fff";ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(hover.x,hover.y,8,0,6.28);ctx.stroke()}
+  requestAnimationFrame(frame)}
+
+/* ======== UI ======== */
+const PHASES=[[ "Phase 0","關鍵字 / IPC 碗形撈取","~5,000+","高召回、大量雜訊，無法判斷真偽 SEP。灰魚是「長得像」但非 SEP 的家族。"],
+ ["Phase 1","PQAI 語意對標（寬閾值）","~1,700","精度提升，但純度稀釋：仍混有約 400 條雜訊魚。"],
+ ["Phase 2","PQAI 語意對標（嚴閾值）","~1,300","高純度核心球體，但卡在結構性天花板：技術語言與法律語言的鴻溝。"],
+ ["Phase 3","土星法 A∪B 擴充","2,500+","核心球體向外輻射：B 引用衛星環＋A 提案人外環，召回率突破。"],
+ ["Phase 4","目標 3,011（推估值 80%）","3,044","全部高通家族入軌；金魚是 A∩B 同時命中的高信心錨點，談判證據首選。"]];
+const phBox=document.getElementById('phases');
+PHASES.forEach((p,i)=>{const b=document.createElement('button');b.type='button';b.className='ph';b.setAttribute('aria-pressed',i===phase);
+  b.innerHTML=`<span class="n">${p[0]}</span><span class="t"></span><span class="c">${p[2]}</span>`;b.querySelector('.t').textContent=p[1];
+  b.onclick=()=>setPhase(i);phBox.appendChild(b)});
+document.getElementById('kA').textContent=(600+550).toLocaleString();document.getElementById('kB').textContent=(594+550).toLocaleString();
+function setPhase(i){phase=i;[...phBox.children].forEach((b,j)=>b.setAttribute('aria-pressed',j===i));document.getElementById('phaseNote').textContent=PHASES[i][3]}
+setPhase(4);
+document.getElementById('armKeys').innerHTML=ARMS.map(([k,l,c])=>`<div class="key"><i style="background:${ARM_COL[k]}"></i><span>${k} ${l}</span><em>~${c.toLocaleString()}</em></div>`).join('');
+function setMode(m){mode=m;document.getElementById('mEco').setAttribute('aria-pressed',m==="eco");document.getElementById('eco').hidden=m!=="eco";
+  document.getElementById('desk').hidden=m==="eco";document.getElementById('prov').textContent=m==="eco"?"數字依《SEP 必要性檢測系統》簡報；人工單件費用依使用者設定。魚為示意個體。":"模擬個體依簡報統計分布生成，非真實專利清單；匯入家族清單後可換成真實魚群。";
+  document.getElementById('mOcean').setAttribute('aria-pressed',m==="ocean");document.getElementById('mVortex').setAttribute('aria-pressed',m==="vortex");document.getElementById('mSaturn').setAttribute('aria-pressed',m==="saturn");
+  document.getElementById('mNet').setAttribute('aria-pressed',m==="net");document.getElementById('deskNet').hidden=m!=="net";
+  document.getElementById('deskVortex').hidden=!(m==="vortex"||m==="ocean");document.getElementById('deskSaturn').hidden=m!=="saturn";
+  document.querySelector('.clock').style.visibility=(m==="vortex"||m==="ocean")?"visible":"hidden";
+  if(m==="net"){hover=null;tip.hidden=true;netStart(NET.step)}
+  if(m==="eco"){hover=null;tip.hidden=true;ecoStart(ECO.step)}}
+document.getElementById('mVortex').onclick=()=>setMode("vortex");document.getElementById('mSaturn').onclick=()=>setMode("saturn");
+document.getElementById('mNet').onclick=()=>setMode("net");document.getElementById('mOcean').onclick=()=>setMode("ocean");document.getElementById('mEco').onclick=()=>setMode("eco");
+document.querySelectorAll('#speeds button').forEach(b=>b.onclick=()=>{SPEED=+b.dataset.s;document.querySelectorAll('#speeds button').forEach(x=>x.setAttribute('aria-pressed',x===b))});
+document.getElementById('ledgerBtn').onclick=()=>document.getElementById('ledger').classList.toggle('open');
+const yr=document.getElementById('yr');
+function setYear(y){year=+y;yr.value=y;document.getElementById('yrTxt').textContent=y;const g=year>2020;
+  document.getElementById('yrBox').classList.toggle('ghost',g);document.getElementById('yrLbl').textContent=g?"推演年（外推）":"高通申請年";
+  fish.forEach(f=>{if(f.who==="q"&&f.year===year&&!f.born){f.born=true;const V=VX.q,a=rnd()*6.28;f.x=V.x+Math.cos(a)*V.R*1.6;f.y=V.y+Math.sin(a)*V.R*1.4;setTimeout(()=>f.born=false,2600)}})}
+yr.oninput=()=>setYear(yr.value);
+let timer=null;const play=document.getElementById('play');
+play.onclick=()=>{if(timer){clearInterval(timer);timer=null;play.textContent="▶ 播放 2008→2023";return}
+  if(year>=2023)setYear(2008);else setYear(year);play.textContent="❚❚ 暫停";
+  timer=setInterval(()=>{if(year>=2023){clearInterval(timer);timer=null;play.textContent="▶ 播放 2008→2023";return}setYear(year+1)},1400/SPEED)};
+setYear(2020);
+
+/* claims → HEVC sections */
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+document.getElementById('drop').onclick=()=>{
+  const txt=document.getElementById('claims').value.toLowerCase();const out=document.getElementById('matchOut');
+  const sc=Object.entries(ARM_KW).map(([k,kws])=>{const hits=kws.filter(w=>txt.includes(w));return {k,hits,score:hits.reduce((s,w)=>s+(txt.split(w).length-1),0)}}).sort((a,b)=>b.score-a.score);
+  if(!sc[0].score){out.innerHTML='<p class="note">沒有對到 HEVC 章節關鍵字（切片、編碼單元、AMVP、合併、POC/RPS、量化參數等），本案魚留在池外。</p>';caseFish=null;return}
+  const best=sc[0].k;const mx=sc[0].score;
+  out.innerHTML=sc.filter(s=>s.score).map(s=>`<span>${esc(s.k)} ${esc(ARM_SECT[s.k].label)}</span><span>${s.score}</span><div class="bar"><span style="width:${s.score/mx*100}%"></span></div><span style="grid-column:1/-1;color:var(--dim);font-size:.7rem">命中：${esc(s.hits.join('、'))}</span>`).join('');
+  out.className='match';
+  const pool=qFish.filter(f=>f.arm===best&&f.year<=Math.min(year,2020));const tgt=pool.sort((a,b)=>a.r0-b.r0)[Math.floor(pool.length*.5)]||qFish[0];
+  caseFish={x:W*.97,y:H*.2,vx:-4,vy:2,ph:0,tgt,arm:best};if(mode!=="ocean")setMode("vortex")};
+document.getElementById('clearCase').onclick=()=>{caseFish=null;const o=document.getElementById('matchOut');o.className='';o.innerHTML='<p class="note">本案魚已移除。</p>'};
+
+/* hover */
+const tip=document.getElementById('tip');
+cv.addEventListener('pointermove',e=>{if(mode==="net"||mode==="eco")return;let best=null,bd=144;for(const f of (mode==="ocean"?OC.fish:fish)){if(f.alpha<.5||f.who==="o")continue;const dx=f.x-e.clientX,dy=f.y-e.clientY,d=dx*dx+dy*dy;if(d<bd){bd=d;best=f}}
+  hover=best;if(!best){tip.hidden=true;return}
+  const who=best.who==="q"?"Qualcomm":best.who==="s"?"Samsung":best.who==="n"?"關鍵字雜訊（非 SEP）":"其他";
+  const role=mode==="saturn"&&best.role?{core:"核心球體",A:"外環 A",B:"衛星環 B",AB:"A∩B 錨點",noise:"雜訊"}[best.role]:"";
+  tip.innerHTML=`<b>${best.ghost?"推演家族":"模擬家族"}</b> · ${who}${best.year?" · "+best.year:""}<br>${best.arm?esc(best.arm+" "+ARM_SECT[best.arm].label)+"<br>":""}${best.ghost?"外推年份新家族":"被引 "+best.cites+" 次"}${best.star?"<br>"+best.star:""}${role?"<br>"+role:""}`;
+  tip.hidden=false;tip.style.left=Math.min(e.clientX+14,W-250)+'px';tip.style.top=(e.clientY+14)+'px'});
+cv.addEventListener('pointerleave',()=>{hover=null;tip.hidden=true});
+
+/* ======== 撒網 vs 燈塔 ======== */
+const NET={step:0,tt:0,fish:[],bagX:0,bagY:0};
+const NET_STEPS=[
+ ["①","大網：關鍵字＋IPC","~5,000+","一網撈下去數量很多，但網裡的魚長得都一樣：真 SEP 和「長得像」的雜訊混在一起，無法判斷真偽。"],
+ ["②","細網：PQAI 語意對標","~1,300","網眼換成語意，純度變高，只留下技術語言區的真 SEP。但 1,744 條真 SEP 躲在法律語言（上位化用語）的深水區，網子撞上結構性天花板下不去。"],
+ ["③","土星燈塔：錨點輻射","3,044","以 1,300 條核心為燈塔，沿引用網絡（B 光束）與 JCT-VC 提案人（A 光束）照進深水。被照到的真 SEP 浮上來入軌，雜訊魚照到也不發光。金魚是 A、B 兩道光都照到的高信心錨點。"]];
+const netBox=document.getElementById('netSteps');
+NET_STEPS.forEach((s,i)=>{const b=document.createElement('button');b.type='button';b.className='ph';
+  b.innerHTML=`<span class="n">${s[0]}</span><span class="t"></span><span class="c">${s[2]}</span>`;b.querySelector('.t').textContent=s[1];b.onclick=()=>netStart(i);netBox.appendChild(b)});
+document.getElementById('netReplay').onclick=()=>netStart(NET.step);
+const zone=()=>({sTop:H*.2,sBot:H*.5,ceil:H*.535,dTop:H*.58,dBot:H*.93});
+function netBuild(){
+  NET.fish=[];const z=zone(),xs=()=>W*(.04+rnd()*.92);
+  const roles=[];for(let i=0;i<600;i++)roles.push("A");for(let i=0;i<594;i++)roles.push("B");for(let i=0;i<550;i++)roles.push("AB");
+  for(let i=0;i<1300;i++)NET.fish.push({kind:"core",hx:xs(),hy:z.sTop+rnd()*(z.sBot-z.sTop)});
+  roles.forEach(r=>NET.fish.push({kind:"deep",role:r,hx:xs(),hy:z.dTop+rnd()*(z.dBot-z.dTop)}));
+  for(let i=0;i<1956;i++){const deep=rnd()<.3;NET.fish.push({kind:"noise",hx:xs(),hy:deep?z.dTop+rnd()*(z.dBot-z.dTop):z.sTop+rnd()*(z.sBot-z.sTop)})}
+  NET.fish.forEach(f=>{f.x=f.hx;f.y=f.hy;f.vx=0;f.vy=0;f.ph=rnd()*6.28;f.jit=rnd();f.th=rnd()*6.28})}
+function netStart(i){NET.step=i;NET.tt=0;if(!NET.fish.length||NET.lastW!==W||NET.lastH!==H){netBuild();NET.lastW=W;NET.lastH=H}
+  NET.fish.forEach(f=>{f.caught=false;f.lit=null;f.bx=(rnd()-.5);f.by=rnd()});
+  if(i===2)NET.fish.forEach(f=>{if(f.kind==="core")f.caught=true});
+  [...netBox.children].forEach((b,j)=>b.setAttribute('aria-pressed',j===i));
+  document.getElementById('netNote').textContent=NET_STEPS[i][3];
+  document.getElementById('nl1').textContent=i===2?"入軌真 SEP":"網中魚數";
+  document.getElementById('nl2').textContent=i===0?"可辨識的真 SEP":i===1?"深水未撈到的真 SEP":"A∩B 金色錨點"}
+const LH=()=>({x:W<860?W*.5:280+(W-610)*.5,y:H*.33,R:Math.min(W,H)*.07});
+function netFrame(now){
+  const t=NET.tt,z=zone(),st=NET.step,L=LH();
+  ctx.fillStyle="#0a2142";ctx.fillRect(0,0,W,H);
+  // water layers
+  const g=ctx.createLinearGradient(0,z.sTop,0,H);g.addColorStop(0,"#123a6e");g.addColorStop(.42,"#0c2a52");g.addColorStop(1,"#081b38");ctx.fillStyle=g;ctx.fillRect(0,z.sTop-30,W,H);
+  ctx.font="500 11px 'Noto Sans TC',sans-serif";ctx.textAlign="left";ctx.fillStyle="#6f8b99";
+  ctx.fillText("技術語言區（規格書用語：CTU、AMVP、Merge…）",W<860?16:296,z.sTop-10);
+  ctx.fillText("法律語言區（請求項上位化：encoding unit、prediction means…）",W<860?16:296,z.dTop-10);
+  // ceiling
+  ctx.strokeStyle=st===1?"rgba(255,209,102,.7)":"rgba(255,255,255,.12)";ctx.setLineDash([6,5]);ctx.beginPath();ctx.moveTo(0,z.ceil);ctx.lineTo(W,z.ceil);ctx.stroke();ctx.setLineDash([]);
+  if(st===1){ctx.fillStyle="#ffd166";ctx.textAlign="right";ctx.fillText("結構性天花板 ~1,300",W-(W<860?16:346),z.ceil-6)}
+  // net geometry
+  const dur=6500,p=Math.min(t/dur,1),haul=Math.max(0,Math.min((t-dur)/1800,1));
+  const front=-W*.25+p*W*1.35,netW=W*.3,netTop=z.sTop-10,netBot=st===0?z.dBot+10:z.ceil-4;
+  NET.bagX=front-netW*.45;NET.bagY=(netTop+netBot)/2;
+  if(st<2&&haul>0){NET.bagX=NET.bagX+(L.x-NET.bagX)*haul;NET.bagY=NET.bagY+(H*.4-NET.bagY)*haul}
+  // fish update
+  let caught=0,real=0,deepLeft=0,orbit=0,ab=0;const beams=st===2?[{a:Math.PI*.5+Math.sin(t*.00055)*1.32,col:"159,216,255",key:"B"},{a:Math.PI*.5+Math.sin(t*.00055+2.2)*1.32,col:"185,166,255",key:"A"}]:[];
+  for(const f of NET.fish){
+    let tx,ty;
+    if(st<2&&!f.caught&&p<1&&f.x<front&&f.x>front-netW&&f.y>netTop&&f.y<netBot){
+      if(st===0||f.kind==="core")f.caught=true}
+    if(st===2&&f.kind==="deep"&&!f.lit){for(const b of beams){const dx=f.x-L.x,dy=f.y-L.y;const a=Math.atan2(dy,dx);let d=Math.abs(a-b.a);d=Math.min(d,6.283-d);
+      if(d<.11&&Math.hypot(dx,dy)<Math.max(W,H)){if(f.role===b.key||f.role==="AB"){f.lit=f.role}}}}
+    if(f.caught&&st<2){const r=Math.min(W,H)*(st===0?.17:.1)*(1-haul*.5);tx=NET.bagX+f.bx*r*1.6;ty=NET.bagY+(f.by-.5)*r*2}
+    else if(st===2&&f.kind==="core"){const a=f.th+t*.0004,rr=L.R*(.35+.65*f.jit);tx=L.x+Math.cos(a)*rr;ty=L.y+Math.sin(a*1.3)*rr*.9}
+    else if(st===2&&f.lit){const ring=f.role==="B"?1.9:f.role==="A"?2.9:2.4;const a=f.th+t*.00025*(3.2-ring);const r=L.R*(ring+(f.jit-.5)*.4);tx=L.x+Math.cos(a)*r;ty=L.y+Math.sin(a)*r*.28}
+    else{tx=f.hx+Math.cos(t*.0004+f.ph)*14;ty=f.hy+Math.sin(t*.0006+f.ph*1.3)*6;if(st===1&&f.kind==="noise"&&Math.abs(f.x-front+netW*.5)<netW*.6&&f.y<z.ceil)tx+=12}
+    f.vx=f.vx*.8+(tx-f.x)*.07;f.vy=f.vy*.8+(ty-f.y)*.07;f.x+=f.vx+Math.cos(f.ph+t*.003)*.2;f.y+=f.vy;f.ph+=.12;
+    if(f.caught&&st<2){caught++;if(f.kind!=="noise")real++}
+    if(st===1&&f.kind==="deep")deepLeft++;
+    if(st===2&&(f.kind==="core"||f.lit)){orbit++;if(f.lit==="AB")ab++}}
+  // draw fish
+  const grp={dim:[],grey:[],blue:[],B:[],A:[],AB:[]};
+  for(const f of NET.fish){
+    if(st===0)(f.caught?grp.grey:grp.dim).push(f);
+    else if(st===1)(f.caught?grp.blue:grp.dim).push(f);
+    else (f.kind==="core"?grp.blue:f.lit==="AB"?grp.AB:f.lit==="A"?grp.A:f.lit==="B"?grp.B:grp.dim).push(f)}
+  const paint=(arr,col,a,s)=>{if(!arr.length)return;ctx.globalAlpha=a;ctx.fillStyle=col;ctx.beginPath();arr.forEach(f=>fishPath(f,s));ctx.fill();ctx.globalAlpha=1};
+  paint(grp.dim,"#5f7584",st===2?.55:.8,2.6);paint(grp.grey,"#8796a0",1,2.6);
+  fadeTrail();ctx=trx;ctx.globalCompositeOperation="lighter";
+  const AC=Object.values(ARM_COL);const byc=new Map();grp.blue.forEach(f=>{const c=AC[Math.floor(f.jit*6)];(byc.get(c)||byc.set(c,[]).get(c)).push(f)});
+  for(const[c,arr]of byc)paint(arr,c,.55,2.6);
+  paint(grp.B,COL.B,.6,2.6);paint(grp.A,COL.A,.6,2.6);paint(grp.AB,COL.gold,.75,2.9);
+  ctx.globalCompositeOperation="source-over";ctx=MAIN;ctx.globalCompositeOperation="lighter";ctx.drawImage(trail,0,0,W,H);ctx.globalCompositeOperation="source-over";
+  // net
+  if(st<2){const nx=haul>0?NET.bagX-netW*.5:front-netW,ny=haul>0?NET.bagY-(netBot-netTop)*(.5-haul*.25):netTop,nh=(netBot-netTop)*(1-haul*.5),nw=netW*(1-haul*.4);
+    ctx.strokeStyle=st===0?"rgba(220,230,236,.35)":"rgba(127,224,208,.55)";ctx.lineWidth=1;const mesh=st===0?26:12;
+    ctx.beginPath();for(let x=0;x<=nw;x+=mesh){ctx.moveTo(nx+x,ny);ctx.quadraticCurveTo(nx+x-14,ny+nh*.5,nx+x,ny+nh)}
+    for(let y=0;y<=nh;y+=mesh){ctx.moveTo(nx,ny+y);ctx.lineTo(nx+nw,ny+y)}ctx.stroke();
+    ctx.strokeStyle="rgba(220,230,236,.7)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(nx+nw,ny);ctx.lineTo(nx+nw,ny+nh);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(nx+nw,ny);ctx.lineTo(nx+nw+40,0);ctx.stroke();
+    if(st===0&&haul>.6){label(NET.bagX,NET.bagY-110,"真假難辨","網中 "+caught.toLocaleString()+" 條，顏色全都一樣","#8796a0")}
+    if(st===1&&p>=1){label(NET.bagX,NET.bagY-80,"高純度，但只有 "+caught.toLocaleString(),"深水仍有 "+deepLeft.toLocaleString()+" 條真 SEP",COL.q)}}
+  // lighthouse + darkness
+  if(st===2){
+    const dk=document.createElement('canvas');dk.width=W;dk.height=H;const d=dk.getContext('2d');
+    d.fillStyle="rgba(5,16,36,.8)";d.fillRect(0,0,W,H);d.globalCompositeOperation="destination-out";
+    beams.forEach(b=>{const len=Math.max(W,H)*.9;const gg=d.createRadialGradient(L.x,L.y,0,L.x,L.y,len);gg.addColorStop(0,"rgba(0,0,0,1)");gg.addColorStop(1,"rgba(0,0,0,.2)");d.fillStyle=gg;
+      d.beginPath();d.moveTo(L.x,L.y);d.arc(L.x,L.y,len,b.a-.11,b.a+.11);d.closePath();d.fill()});
+    const gl=d.createRadialGradient(L.x,L.y,0,L.x,L.y,L.R*3.4);gl.addColorStop(0,"rgba(0,0,0,1)");gl.addColorStop(1,"rgba(0,0,0,0)");d.fillStyle=gl;d.beginPath();d.arc(L.x,L.y,L.R*3.4,0,6.28);d.fill();
+    ctx.drawImage(dk,0,0);
+    beams.forEach(b=>{const len=Math.max(W,H)*.9;const gg=ctx.createRadialGradient(L.x,L.y,0,L.x,L.y,len);gg.addColorStop(0,`rgba(${b.col},.28)`);gg.addColorStop(1,`rgba(${b.col},0)`);ctx.fillStyle=gg;
+      ctx.beginPath();ctx.moveTo(L.x,L.y);ctx.arc(L.x,L.y,len,b.a-.11,b.a+.11);ctx.closePath();ctx.fill()});
+    ctx.strokeStyle="rgba(159,216,255,.25)";[1.9,2.9].forEach(k=>{ctx.beginPath();ctx.ellipse(L.x,L.y,L.R*k,L.R*k*.28,0,0,6.28);ctx.stroke()});
+    const core=ctx.createRadialGradient(L.x,L.y,0,L.x,L.y,L.R);core.addColorStop(0,"rgba(255,244,214,.95)");core.addColorStop(.3,"rgba(79,179,255,.5)");core.addColorStop(1,"rgba(79,179,255,0)");ctx.fillStyle=core;ctx.beginPath();ctx.arc(L.x,L.y,L.R,0,6.28);ctx.fill();
+    label(L.x,L.y-L.R*1.25-18,"核心球體＝燈塔","1,300 條 PQAI 錨點","#fff4d6");
+    ctx.font="500 11px 'Noto Sans TC',sans-serif";ctx.textAlign="center";ctx.fillStyle="#9fd8ff";
+    const bl=(b,txt)=>{const r=H*.5;ctx.fillStyle=`rgb(${b.col})`;ctx.fillText(txt,L.x+Math.cos(b.a)*r,L.y+Math.sin(b.a)*r)};bl(beams[0],"B 光束 · 引用網絡");bl(beams[1],"A 光束 · JCT-VC 提案人")}
+  NET.tick=(NET.tick||0)+1;
+  if(NET.tick%6===0){document.getElementById('nc1').textContent=(st===2?orbit:caught).toLocaleString();document.getElementById('nc2').textContent=(st===0?0:st===1?deepLeft:ab).toLocaleString()}
+}
+netStart(0);
+/* ======== 四大洋全景 ======== */
+const OC={fish:[],tr:[],schools:[],tt:0,built:false,q:{}};
+const OCEANS=[
+ {k:"h264",name:"H.264 / AVC 洋",sub:"上一代 · 待匯入",x0:0,x1:.19,col:[38,130,150]},
+ {k:"hevc",name:"HEVC 洋",sub:"15,735 族可分析母數",x0:.19,x1:.57,col:[30,120,255]},
+ {k:"vvc",name:"VVC 洋",sub:"示意 · 待匯入 VVC 資料",x0:.57,x1:.85,col:[176,70,255]},
+ {k:"6g",name:"6G 未知海域",sub:"無黃金集 · 母數未知",x0:.85,x1:1,col:[110,120,132]}];
+const OCK=Object.fromEntries(OCEANS.map(o=>[o.k,o]));
+const TOPY=()=>Math.max(W<860?150:140,(document.getElementById('top').getBoundingClientRect().bottom||0)+(W<860?44:64)), BOTY=()=>H-(W<860?96:70);
+function hsh(i,j,k){let h=Math.imul(i|0,374761393)^Math.imul(j|0,668265263)^Math.imul(k|0,1440662683);h=Math.imul(h^(h>>>13),1274126177);return ((h^(h>>>16))>>>0)/4294967296}
+function vn(x,y,z){const xi=Math.floor(x),yi=Math.floor(y),zi=Math.floor(z),u0=x-xi,v0=y-yi,w0=z-zi;const sm=t=>t*t*(3-2*t),u=sm(u0),v=sm(v0),w=sm(w0),L=(a,b,t)=>a+(b-a)*t,c=(a,b,d)=>hsh(xi+a,yi+b,zi+d);
+  return L(L(L(c(0,0,0),c(1,0,0),u),L(c(0,1,0),c(1,1,0),u),v),L(L(c(0,0,1),c(1,0,1),u),L(c(0,1,1),c(1,1,1),u),v),w)}
+function flowAt(x,y,t){const a=vn(x/300,y/300,t*.00009)*12.566+vn(x/110+40,y/110,t*.00022)*2.2;return [Math.cos(a)+.18,Math.sin(a)]} // slight eastward drift: HEVC → VVC
+function ocBuild(){
+  OC.fish=[];OC.schools=[];OC.q={};
+  const mkS=(who,oc,rad,arm)=>{const s={who,oc:OCK[oc],rad,arm,seed:OC.schools.length*13.7+3.1,hx:0,hy:0};OC.schools.push(s);return s};
+  ARMS.forEach(([k])=>{OC.q[k]=mkS("q","hevc",60,k)});
+  const qv=[mkS("q","vvc",70,"v1"),mkS("q","vvc",70,"v2")];
+  const ss=[mkS("s","hevc",80),mkS("s","hevc",80),mkS("s","hevc",80)];
+  const os=[mkS("o","hevc",90),mkS("o","hevc",90),mkS("o","hevc",90),mkS("o","hevc",90)];
+  const add=o=>{OC.fish.push(Object.assign({x:0,y:0,vx:(rnd()-.5)*2,vy:(rnd()-.5)*2,ph:rnd()*6.28,alpha:0,seen:false},o))};
+  qFish.forEach(f=>add({who:"q",arm:f.arm,year:f.year,cites:f.cites,star:f.star,jit:f.jit,school:f.year>=2018?qv[f.jit<.5?0:1]:OC.q[f.arm],migr:f.year>=2018}));
+  ghosts.forEach(g=>add({who:"q",arm:g.arm,year:g.year,ghost:true,cites:0,jit:g.jit,school:qv[g.jit<.5?0:1]}));
+  for(let i=0;i<1311;i++)add({who:"s",cites:citeSample(),jit:rnd(),school:ss[i%3]});
+  for(let i=0;i<1259;i++)add({who:"o",cites:citeSample(),jit:rnd(),school:os[i%4]});
+  OC.tr=[];for(let i=0;i<1700;i++)OC.tr.push({x:rnd()*W,y:TOPY()+rnd()*(BOTY()-TOPY()),life:rnd()*200});
+  OC.built=true;OC.w=W;OC.h=H}
+const ocVis=f=>f.who!=="q"?true:f.ghost?year>=f.year:f.year<=Math.min(year,2020);
+function ocColor(f){if(f.who==="q")return ARM_COL[f.arm]||COL.q;if(f.who==="s")return S_COLS[Math.floor(f.jit*S_COLS.length)];return O_COLS[Math.floor(f.jit*O_COLS.length)]}
+function ocStep(t){
+  const top=TOPY(),bot=BOTY();
+  for(const s of OC.schools){const O=s.oc,nx=vn(s.seed,1.3,t*.00007),ny=vn(2.7,s.seed,t*.00007);
+    s.hx=W*(O.x0+(O.x1-O.x0)*(.15+.7*nx));s.hy=top+(bot-top)*(.12+.76*ny)}
+  const CELL=36,grid=new Map();
+  for(const f of OC.fish){if(f.alpha<.05)continue;const k=((f.x/CELL)|0)*4096+((f.y/CELL)|0);let a=grid.get(k);if(!a)grid.set(k,a=[]);a.push(f)}
+  const sp=SPEED*.55;
+  for(const f of OC.fish){
+    const on=ocVis(f);f.alpha+=((on?1:0)-f.alpha)*.05;if(!on&&f.alpha<.01)continue;
+    if(on&&!f.seen){f.seen=true;const H0=OCK.hevc;
+      if(f.migr||f.ghost){f.x=W*(f.ghost?OCK.vvc.x0+.02:H0.x0+(H0.x1-H0.x0)*rnd());f.y=top+(bot-top)*rnd()}
+      else{f.x=f.school.hx+(rnd()-.5)*120;f.y=f.school.hy+(rnd()-.5)*120}}
+    let vx=f.vx,vy=f.vy,ax=0,ay=0,cx=0,cy=0,n=0,sx=0,sy=0,checked=0;
+    const gx=(f.x/CELL)|0,gy=(f.y/CELL)|0;
+    outer:for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const arr=grid.get((gx+i)*4096+gy+j);if(!arr)continue;
+      for(const o of arr){if(o===f)continue;if(++checked>28)break outer;const dx=o.x-f.x,dy=o.y-f.y,d2=dx*dx+dy*dy;
+        if(d2<256&&d2>0){sx-=dx/d2;sy-=dy/d2}
+        if(o.who===f.who&&d2<1600){ax+=o.vx;ay+=o.vy;cx+=o.x;cy+=o.y;n++}}}
+    if(n){vx+=(ax/n-vx)*.07;vy+=(ay/n-vy)*.07;vx+=(cx/n-f.x)*.0015;vy+=(cy/n-f.y)*.0015}
+    vx+=sx*2.6;vy+=sy*2.6;
+    const fl=flowAt(f.x,f.y,t);vx+=fl[0]*.09;vy+=fl[1]*.09;
+    const S=f.school,hx=S.hx-f.x,hy=S.hy-f.y,hd=Math.hypot(hx,hy)||1;
+    if(hd>S.rad){const k=.035*Math.min(3,.3+(hd-S.rad)/S.rad);vx+=hx/hd*k;vy+=hy/hd*k}
+    vx+=Math.cos(f.ph)*.04;vy+=Math.sin(f.ph*1.3)*.04;f.ph+=.05+f.jit*.03;
+    if(f.y<top)vy+=.25;if(f.y>bot)vy-=.25;if(f.x<8)vx+=.25;if(f.x>W-8)vx-=.25;
+    const v=Math.hypot(vx,vy),mx=2.4,mn=.7;if(v>mx){vx*=mx/v;vy*=mx/v}else if(v<mn){vx*=mn/v;vy*=mn/v}
+    f.vx=vx;f.vy=vy;f.x+=vx*sp;f.y+=vy*sp}
+  if(caseFish&&caseFish.arm){const S=OC.q[caseFish.arm];const tx=S.hx,ty=S.hy;caseFish.vx=caseFish.vx*.92+(tx-caseFish.x)*.004;caseFish.vy=caseFish.vy*.92+(ty-caseFish.y)*.004;caseFish.x+=caseFish.vx*sp;caseFish.y+=caseFish.vy*sp;caseFish.ph+=.2}
+}
+function ocFrame(t,now){
+  if(!OC.built||OC.w!==W||OC.h!==H)ocBuild();
+  ocStep(t);const top=TOPY(),bot=BOTY();
+  ctx.fillStyle="#0a2142";ctx.fillRect(0,0,W,H);
+  // ocean bands with soft seams
+  const g=ctx.createLinearGradient(0,0,W,0);
+  OCEANS.forEach(o=>{const c=o.col,m=(o.x0+o.x1)/2;g.addColorStop(Math.max(0,o.x0+.02),`rgba(${c[0]},${c[1]},${c[2]},.10)`);g.addColorStop(m,`rgba(${c[0]},${c[1]},${c[2]},.2)`);g.addColorStop(Math.min(1,o.x1-.02),`rgba(${c[0]},${c[1]},${c[2]},.10)`)});
+  ctx.fillStyle=g;ctx.fillRect(0,top-20,W,bot-top+40);
+  // 6G fog
+  for(let i=0;i<5;i++){const fx=W*(.86+.13*vn(i*7.1,.5,t*.00005)),fy=top+(bot-top)*vn(.3,i*5.3,t*.00005),r=Math.min(W,H)*.16;
+    const fg=ctx.createRadialGradient(fx,fy,0,fx,fy,r);fg.addColorStop(0,"rgba(150,160,172,.16)");fg.addColorStop(1,"rgba(150,160,172,0)");ctx.fillStyle=fg;ctx.beginPath();ctx.arc(fx,fy,r,0,6.283);ctx.fill()}
+  // ocean labels
+  const qH=OC.fish.filter(f=>f.who==="q"&&!f.ghost&&!f.migr&&ocVis(f)).length,qV=OC.fish.filter(f=>f.who==="q"&&(f.migr||f.ghost)&&ocVis(f)).length;
+  OCEANS.forEach(o=>{const x=W*(o.x0+o.x1)/2;const c=`rgb(${o.col.join(',')})`;
+    const sub=o.k==="hevc"?`高通 ${qH.toLocaleString()} · 三星 2,621 · 其他 10,070`:o.k==="vvc"?(qV?`示意：高通 ${qV} 族遷入（含推演）`:o.sub):o.sub;
+    if(W<860&&(o.k==="h264"||o.k==="6g")){ctx.save();ctx.font="700 11px 'Noto Sans TC',sans-serif";ctx.fillStyle=c;ctx.textAlign="center";ctx.fillText(o.k==="h264"?"H.264":"6G",x,top-6);ctx.restore();return}
+    label(x,top-4,o.name,sub,c)});
+  // trails: tracers + fish
+  fadeTrail();ctx=trx;ctx.globalCompositeOperation="lighter";
+  const byO=new Map();
+  for(const p of OC.tr){const fl=flowAt(p.x,p.y,t);p.x+=fl[0]*1.5*SPEED;p.y+=fl[1]*1.5*SPEED;p.life-=1;
+    if(p.life<0||p.x<0||p.x>W||p.y<top-10||p.y>bot+10){p.x=rnd()*W;p.y=top+rnd()*(bot-top);p.life=120+rnd()*180}
+    const o=OCEANS.find(o=>p.x/W<o.x1)||OCEANS[3];(byO.get(o)||byO.set(o,[]).get(o)).push(p)}
+  for(const[o,arr]of byO){const c=o.col;ctx.fillStyle=`rgba(${Math.min(255,c[0]+90)},${Math.min(255,c[1]+90)},${Math.min(255,c[2]+60)},.55)`;ctx.beginPath();arr.forEach(p=>{ctx.moveTo(p.x+1.1,p.y);ctx.arc(p.x,p.y,1.1,0,6.283)});ctx.fill()}
+  ctx.globalCompositeOperation="source-over";const groups=new Map();
+  for(const f of OC.fish){if(f.alpha<.03)continue;const key=(f.ghost?"G":ocColor(f))+"|"+Math.round(f.alpha*4);(groups.get(key)||groups.set(key,[]).get(key)).push(f)}
+  for(const[key,arr]of groups){const[col,a]=key.split("|");ctx.globalAlpha=Math.min(1,a/4)*.9;ctx.beginPath();
+    arr.forEach(f=>fishPath(f,f.who==="o"?2.2:(1.8+Math.min(Math.log10(f.cites+1),2.9)*.7)));
+    if(col==="G"){ctx.strokeStyle=COL.gold;ctx.lineWidth=1;ctx.stroke()}else{ctx.fillStyle=col;ctx.fill()}}
+  ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";ctx=MAIN;
+  ctx.globalCompositeOperation="lighter";ctx.drawImage(trail,0,0,W,H);ctx.globalCompositeOperation="source-over";
+  // legend chips (bottom-left of HEVC ocean)
+  const lx=Math.max(16,W*OCK.hevc.x0+12),ly=bot+8;ctx.font="500 11px 'Noto Sans TC',sans-serif";ctx.textAlign="left";
+  [["Qualcomm（依章節分色）",ARM_COL["6B"]],["Samsung · 1 條＝2 族",S_COLS[0]],["其他權利人 · 1 條＝8 族",O_COLS[0]],["推演魚（虛線）",COL.gold]].reduce((x,[t,c])=>{ctx.fillStyle=c;ctx.fillRect(x,ly+4,10,4);ctx.fillStyle="#9fb4bf";ctx.fillText(t,x+14,ly+10);return x+ctx.measureText(t).width+34},lx);
+  const st=OC.fish.find(f=>f.star);if(st&&st.alpha>.3){ctx.strokeStyle=COL.gold;ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(st.x,st.y,9+Math.sin(now*.004)*2,0,6.28);ctx.stroke()}
+  if(caseFish){ctx.save();ctx.shadowColor="#fff";ctx.shadowBlur=16;ctx.fillStyle="#fff";ctx.beginPath();fishPath(caseFish,6);ctx.fill();ctx.restore();ctx.font="700 12px 'Noto Sans TC',sans-serif";ctx.fillStyle="#fff";ctx.textAlign="left";ctx.fillText("本案",caseFish.x+12,caseFish.y-8)}
+  if(hover){ctx.strokeStyle="#fff";ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(hover.x,hover.y,8,0,6.28);ctx.stroke()}
+}
+
+/* ======== 經濟效益 ======== */
+// figures from 「SEP 必要性檢測系統」(2026.02): manual 21,024 h for 42,048 筆 (=0.5 h/筆, ≈10 年); system 72 h; AI API bill $11,035 for 1.7 萬件 (≈$0.65/件);
+// backtest accuracy 89.2% (傳統 76%); precision 88%, F1 85.5%; reproducibility <30% → 100%. Per-SEP manual verification cost: user setting ($5,000).
+const ECO={step:0,tt:0,base:42048,per:6000,fish:[],floats:[],insp:null,done:0,built:false};
+const BASES=[[3044,"高通 3,044"],[17000,"全掃描 17,000"],[42048,"原始池 42,048"]];
+const H_PER=21024/42048, H_YEAR=2102.4, AI_H=72, AI_PER=11035/17000, P=.88, F1=.855, REC=F1*P/(2*P-F1);
+const GOLD=2621, TP=Math.round(REC*GOLD), FN=GOLD-TP, FP=Math.round(TP*(1-P)/P);
+const ECO_STEPS=[["①","人工逐件驗證"],["②","AI 三階段漏斗"],["③","三星黃金集驗準確率"],["④","總帳"]];
+const money=v=>v>=1e6?"$"+(v/1e6).toFixed(v>=1e8?0:1)+"M":v>=1e3?"$"+Math.round(v).toLocaleString():"$"+v.toFixed(2);
+const ecoSteps=document.getElementById('ecoSteps');
+ECO_STEPS.forEach((st,i)=>{const b=document.createElement('button');b.type='button';b.className='ph';b.innerHTML=`<span class="n">${st[0]}</span><span class="t"></span>`;b.querySelector('.t').textContent=st[1];b.onclick=()=>ecoStart(i);ecoSteps.appendChild(b)});
+const ecoBase=document.getElementById('ecoBase');
+BASES.forEach(([n,l])=>{const b=document.createElement('button');b.type='button';b.textContent=l;b.setAttribute('aria-pressed',n===ECO.base);b.onclick=()=>{ECO.base=n;[...ecoBase.children].forEach(x=>x.setAttribute('aria-pressed',x===b));ecoStart(ECO.step)};ecoBase.appendChild(b)});
+document.getElementById('ecoPer').addEventListener('input',e=>{const v=+e.target.value;if(v>0){ECO.per=v;ecoStart(ECO.step)}});
+function ecoBuild(){ECO.fish=[];const top=TOPY()-30,bot=H-(W<860?H*.5:260);
+  const add=(o)=>ECO.fish.push(Object.assign({x:W*(.05+rnd()*.9),y:top+rnd()*(bot-top),vx:0,vy:0,ph:rnd()*6.28,jit:rnd(),score:rnd()},o));
+  for(let i=0;i<GOLD;i++)add({gold:true,cls:i<TP?"TP":"FN"});
+  for(let i=0;i<1800;i++)add({gold:false,cls:i<FP?"FP":"TN"});
+  ECO.built=true;ECO.w=W;ECO.h=H;ECO.top=top;ECO.bot=bot}
+function ecoStart(i){ECO.step=i;ECO.tt=0;ECO.done=0;ECO.floats=[];ECO.insp={x:W*.5,y:H*.35,tgt:null};
+  if(!ECO.built||ECO.w!==W||ECO.h!==H)ecoBuild();ECO.fish.forEach(f=>{f.chk=false;f.scan=false});
+  [...ecoSteps.children].forEach((b,j)=>b.setAttribute('aria-pressed',j===i));
+  document.getElementById('eBars').style.display=i===3?'grid':'none';const eg=document.querySelector('.ecoGrid');eg.style.display=i===3?'none':'grid';eg.classList.toggle('four',i===2);document.getElementById('eR').style.display=i===2?'block':'none';
+  document.getElementById('poolCost').innerHTML=`<span>原始池 42,048 件全部以人工驗證</span><b>$${(42048*ECO.per).toLocaleString()}</b><span>42,048 件 × $${ECO.per.toLocaleString()} · 21,024 小時（約 10 年）</span>`;
+  const N=ECO.base,mh=N*H_PER;
+  const notes=["一位專家一次看一件：每件約 0.5 小時、委外 $"+ECO.per.toLocaleString()+"。白點是已驗證的家族，飄起的金額是每一件的費用。照這個速度，"+N.toLocaleString()+" 件要 "+Math.round(mh).toLocaleString()+" 小時，約 "+(mh/H_YEAR).toFixed(1)+" 年。",
+    "語意向量＋8 維度評分的三階段漏斗一次掃過全池，聲納掃到的魚依必要性分數上色。瓶頸在資料清洗，不在算力，全池 72 小時完成。",
+    "答案卷不用人工標註：直接拿專利池公告的三星 2,621 件 SEP 當黃金集。綠魚＝AI 判為 SEP 且在名單上，紅魚＝AI 判為 SEP 但不在名單上，暗金框＝名單上但 AI 漏掉。",
+    "同一批專利，兩種做法的時間與費用。AI 費用為運算帳單換算；人工費用依你設定的單件金額。"];
+  document.getElementById('eNote').textContent=notes[i];
+  if(i===3)renderBars()}
+function renderBars(){const N=ECO.base,mh=N*H_PER,mc=N*ECO.per,ac=N===17000?11035:N*AI_PER;
+  const row=(lab,a,b,fa,fb,ca,cb)=>`<div class="brow"><span>${lab}</span><div class="btrack"><div class="bline"><i style="width:${fa}%;background:${ca}"></i><em>人工 ${a}</em></div><div class="bline"><i style="width:${fb}%;background:${cb}"></i><em>AI ${b}</em></div></div></div>`;
+  document.getElementById('eBars').innerHTML=
+   row("耗時",Math.round(mh).toLocaleString()+" h（"+(mh/H_YEAR).toFixed(1)+" 年）",AI_H+" h（"+(mh/AI_H).toFixed(0)+"× 快）",72,Math.max(.4,72*AI_H/mh),"#ff6b6b","#3ddcff")+
+   row("費用",money(mc),money(ac)+(N===17000?"（實際帳單）":"（帳單換算）"),72,Math.max(.4,72*ac/mc),"#ff6b6b","#3ddcff")+
+   `<div class="brow"><span>省下</span><div class="btrack"><div class="bline"><i style="width:72%;background:#ffd166"></i><em>${money(mc-ac)} · ${Math.round(mh-AI_H).toLocaleString()} 小時</em></div></div></div>`+
+   row("可重驗性","< 30%","100%",21.6,72,"#ff6b6b","#3ddcff")+
+   row("準確率","傳統交叉驗證 76%","回測 89.2%（精確率 88%、F1 85.5%）",72*.76,72*.892,"#ff6b6b","#3ddcff")+
+   `<div class="brow"><span>召回率</span><div class="btrack"><div class="bline"><i style="width:${72*REC}%;background:#cdeeff"></i><em>AI ≈ ${(REC*100).toFixed(0)}%（三星 2,621 件找回 ${TP.toLocaleString()} 件，由 F1 換算）</em></div></div></div>`}
+function setM(t,ts,c,cs,al,a,as,tl,cl){const g=id=>document.getElementById(id);g('eTl').textContent=tl||'耗時';g('eCl').textContent=cl||'驗證費用（USD）';g('eT').textContent=t;g('eTs').textContent=ts;g('eC').textContent=c;g('eCs').textContent=cs;g('eAl').textContent=al;g('eA').textContent=a;g('eAs').textContent=as}
+function ecoFrame(t,dt){
+  if(!ECO.built||ECO.w!==W||ECO.h!==H)ecoBuild();
+  const st=ECO.step,N=ECO.base,cx=W*.5,cy=(ECO.top+ECO.bot)/2;
+  ctx.fillStyle="#0a2142";ctx.fillRect(0,0,W,H);
+  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(W,H)*.6);g.addColorStop(0,"#123a6e");g.addColorStop(1,"#0a2142");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  // motion
+  for(const f of ECO.fish){const fl=flowAt(f.x,f.y,t);f.vx=f.vx*.94+fl[0]*.08;f.vy=f.vy*.94+fl[1]*.08;f.x+=f.vx*SPEED*.6;f.y+=f.vy*SPEED*.6;f.ph+=.1;
+    if(f.x<10)f.x=W-10;if(f.x>W-10)f.x=10;if(f.y<ECO.top||f.y>ECO.bot||rnd()<.0015){f.y=ECO.top+rnd()*(ECO.bot-ECO.top);f.x=W*(.03+rnd()*.94);f.vx=f.vy=0}}
+  const scale=Math.max(1,Math.ceil(N/ECO.fish.length));
+  let ringR=0;
+  if(st===0){ // inspector
+    const I=ECO.insp;if(!I.tgt||I.tgt.chk){let best=null,bd=1e12;for(const f of ECO.fish){if(f.chk)continue;const d=(f.x-I.x)**2+(f.y-I.y)**2;if(d<bd){bd=d;best=f}}I.tgt=best}
+    if(I.tgt){I.x+=(I.tgt.x-I.x)*.06*SPEED;I.y+=(I.tgt.y-I.y)*.06*SPEED;if(Math.hypot(I.tgt.x-I.x,I.tgt.y-I.y)<5){I.tgt.chk=true;ECO.done++;ECO.floats.push({x:I.x,y:I.y,life:1,txt:"+$"+ECO.per.toLocaleString()})}}
+    const k=ECO.done*scale,hh=k*H_PER;
+    setM(Math.round(hh).toLocaleString()+" h","全部 "+N.toLocaleString()+" 件需 "+Math.round(N*H_PER).toLocaleString()+" h ≈ "+(N*H_PER/H_YEAR).toFixed(1)+" 年",
+      money(k*ECO.per),"全部需 "+money(N*ECO.per)+"（單件 $"+ECO.per.toLocaleString()+"）","結論重現率","< 30%","不同專家判定常互相衝突")}
+  else if(st===1){const p=Math.min(1,t/5200);ringR=p*Math.hypot(W,H)*.75;
+    for(const f of ECO.fish)if(!f.scan&&Math.hypot(f.x-cx,f.y-cy)<ringR)f.scan=true;
+    const ac=N===17000?11035:N*AI_PER;
+    setM((p*AI_H).toFixed(0)+" h","全池 "+N.toLocaleString()+" 件 · 人工需 "+Math.round(N*H_PER).toLocaleString()+" h（"+(N*H_PER/AI_H).toFixed(0)+"×）",
+      money(p*ac),N===17000?"實際 API 帳單 $11,035（三個月）":"依帳單換算約 $"+AI_PER.toFixed(2)+"／件","可重驗性","100%","同一參數檔重跑，結果誤差 0%")}
+  else if(st===2){const p=Math.min(1,t/4500);
+    setM(Math.round(p*TP).toLocaleString()+" / "+GOLD.toLocaleString(),"三星池內 SEP 被 AI 找回（召回率約 "+(REC*100).toFixed(0)+"%，由 F1 換算）",
+      "$0","答案卷＝專利池公告清單，不需人工標註","精確率 / F1","88% / 85.5%","回測準確率 89.2%（傳統方法 76%）","AI 找回的三星 SEP","人工標註成本");
+    ECO.p2=p}
+  else{setM("","","","","","","")}
+  // draw fish into trail
+  fadeTrail();ctx=trx;ctx.globalCompositeOperation="source-over";
+  const grp=new Map(),put=(c,f)=>{(grp.get(c)||grp.set(c,[]).get(c)).push(f)};
+  const scoreCol=f=>{const h=f.gold?(160+f.score*40):(200+f.score*60);return `hsl(${h|0},95%,${f.gold?62:52}%)`};
+  for(const f of ECO.fish){
+    if(st===0)put(f.chk?"#ffffff":"#3e5566",f);
+    else if(st===1)put(f.scan?(f.gold?"#3ddcff":"#7c6bff"):"#2a3a46",f);
+    else if(st===2){const on=f.jit<ECO.p2;if(!on){put(f.gold?"#5b5030":"#2a3a46",f);continue}
+      put(f.cls==="TP"?"#4dff9a":f.cls==="FP"?"#ff4f6d":f.cls==="FN"?"#5b5030":"#2f4150",f)}
+    else put(f.gold?"#3ddcff":"#7c6bff",f)}
+  for(const[c,arr]of grp){ctx.fillStyle=c;ctx.globalAlpha=.9;ctx.beginPath();arr.forEach(f=>fishPath(f,2.5));ctx.fill()}
+  ctx.globalAlpha=1;ctx=MAIN;ctx.globalCompositeOperation="lighter";ctx.drawImage(trail,0,0,W,H);ctx.globalCompositeOperation="source-over";
+  if(st===2){ctx.strokeStyle="rgba(255,209,102,.8)";ctx.lineWidth=1;ctx.beginPath();for(const f of ECO.fish)if(f.cls==="FN"&&f.jit<ECO.p2){ctx.moveTo(f.x+5,f.y);ctx.arc(f.x,f.y,5,0,6.283)}ctx.stroke()}
+  if(st===0&&ECO.insp){const I=ECO.insp;const lg=ctx.createRadialGradient(I.x,I.y,0,I.x,I.y,40);lg.addColorStop(0,"rgba(255,230,160,.55)");lg.addColorStop(1,"rgba(255,230,160,0)");ctx.fillStyle=lg;ctx.beginPath();ctx.arc(I.x,I.y,40,0,6.283);ctx.fill();
+    ctx.font="700 12px 'Noto Sans TC',sans-serif";ctx.fillStyle="#ffe6a0";ctx.textAlign="center";ctx.fillText("專家",I.x,I.y-22);
+    ctx.font="500 12px 'IBM Plex Mono',monospace";ECO.floats.forEach(fl=>{fl.y-=.6*SPEED;fl.life-=.012*SPEED;ctx.globalAlpha=Math.max(0,fl.life);ctx.fillStyle="#ffd166";ctx.fillText(fl.txt,fl.x,fl.y)});ctx.globalAlpha=1;ECO.floats=ECO.floats.filter(f=>f.life>0)}
+  if(st===1){ctx.strokeStyle="rgba(61,220,255,.6)";ctx.lineWidth=2;for(let k=0;k<3;k++){const r=ringR-k*60;if(r>0){ctx.globalAlpha=.6-k*.18;ctx.beginPath();ctx.arc(cx,cy,r,0,6.283);ctx.stroke()}}ctx.globalAlpha=1;
+    label(cx,ECO.top-14,"AI 三階段漏斗掃描",ringR>=Math.hypot(W,H)*.74?"完成 · 72 h":"掃描中…","#3ddcff")}
+  if(st===2)label(cx,ECO.top-14,"黃金集：專利池三星 2,621 件","綠 TP "+TP.toLocaleString()+" · 紅 FP ≈"+FP+" · 暗金 FN "+FN,"#4dff9a");
+  if(st===0)label(cx,ECO.top-14,"一條魚 ≈ "+scale+" 件 · 已驗證 "+(ECO.done*scale).toLocaleString()+" / "+N.toLocaleString(),"照這速度要 "+(N*H_PER/H_YEAR).toFixed(1)+" 年","#ffe6a0");
+}
+/* fold panels like a dropdown */
+[["ledger","簡報數字"],["desk","工具：本案比對 · 推演 · 階段"]].forEach(([id,title])=>{const el=document.getElementById(id);const body=document.createElement('div');body.className='foldBody';
+  while(el.firstChild)body.appendChild(el.firstChild);const b=document.createElement('button');b.type='button';b.className='fold';b.textContent=title;b.setAttribute('aria-expanded','false');
+  b.onclick=()=>{const open=el.classList.toggle('folded');b.setAttribute('aria-expanded',String(!open))};el.appendChild(b);el.appendChild(body);el.classList.add('folded')});
+
+
+addEventListener('resize',resize);resize();setMode('ocean');
+fish.forEach(f=>{const p=target(f,0);f.x=p[0]+(rnd()-.5)*40;f.y=p[1]+(rnd()-.5)*40});
+requestAnimationFrame(frame);
+</script>
+
+</body>
+</html>

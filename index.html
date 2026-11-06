@@ -1231,6 +1231,32 @@
   }
   .btn-bridge-clear:hover { border-color: var(--high); color: var(--high); }
 
+
+  /* ── DEMO LINK & TIDY LEFT PANEL (collapsible sections) ── */
+  .main-panel { overflow-y: visible; } /* 讓分頁列黏在頁首下方，不再蓋住第一張卡片 */
+  .header-pill { white-space: nowrap; }
+  .layout > * { min-width: 0; }
+  @media (max-width: 600px) {
+    header { padding: 0 1rem; }
+    .logo-name, .logo-version { display: none; }
+    .header-right .header-pill:not(.header-link):not(#dbStatusPill) { display: none; }
+    .main-content { padding: 1rem; }
+    .tab-bar { padding: 0 1rem; }
+  }
+  a.header-link { text-decoration: none; color: var(--accent); border-color: var(--border-strong); }
+  a.header-link:hover { color: #fff; background: var(--accent-glow); }
+  .panel-section.collapsible > .section-label { cursor: pointer; user-select: none; margin-bottom: 0; }
+  .panel-section.collapsible > .section-label:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+  .panel-section.collapsible > .section-label::after { content: "▾"; margin-left: auto; font-size: 11px; color: var(--accent); transition: transform .2s; }
+  .panel-section.collapsible.folded > .section-label::after { transform: rotate(-90deg); }
+  .panel-section.collapsible:not(.folded) > .section-label { margin-bottom: 0.875rem; }
+  .panel-section.collapsible.folded > :not(.section-label) { display: none !important; }
+  details.adv-block { margin-bottom: 0.875rem; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 10px; }
+  details.adv-block > summary { cursor: pointer; font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; color: var(--text-muted); list-style: none; }
+  details.adv-block > summary::-webkit-details-marker { display: none; }
+  details.adv-block > summary::before { content: "▸ "; color: var(--accent); }
+  details.adv-block[open] > summary::before { content: "▾ "; }
+  details.adv-block[open] > summary { margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -1243,6 +1269,7 @@
     <span class="logo-version">v3.1</span>
   </div>
   <div class="header-right">
+    <a class="header-pill header-link" href="demo/ocean.html" target="_blank" rel="noopener" title="開啟 HEVC/VVC 海洋視覺化與經濟效益動畫">🌊 海洋 Demo ↗</a>
     <div class="header-pill">HEVC / VVC</div>
     <div class="header-pill active" id="dbStatusPill">● OFFLINE</div>
   </div>
@@ -3041,6 +3068,28 @@ normalizeSynonyms = function(text) {
   await loadBuiltinBridge();
 })();
 
+
+// ── 版面整理：左欄區塊可收合（像下拉選單），進階設定收進「進階」 ──
+(function tidyLeftPanel(){
+  const KEY='sepdet.fold.v1';
+  let saved={};try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(e){}};
+  const db=document.querySelector('.left-panel .panel-section');
+  const bridge=db&&db.querySelector('.bridge-bar'),drive=db&&db.querySelector('.drive-block');
+  if(db&&bridge&&drive){const d=document.createElement('details');d.className='adv-block';
+    d.innerHTML='<summary>進階：術語橋接規則庫 · Google Drive 規格書</summary>';
+    bridge.parentNode.insertBefore(d,bridge);d.appendChild(bridge);d.appendChild(drive)}
+  document.querySelectorAll('.left-panel > .panel-section').forEach((sec,i)=>{
+    const lab=sec.querySelector(':scope > .section-label');if(!lab)return;
+    const id='s'+i,def=i===2; // 8 維屬性權重預設收合
+    sec.classList.add('collapsible');lab.tabIndex=0;lab.setAttribute('role','button');
+    const set=f=>{sec.classList.toggle('folded',f);lab.setAttribute('aria-expanded',String(!f))};
+    set(id in saved?saved[id]:def);
+    const tog=()=>{const f=!sec.classList.contains('folded');set(f);saved[id]=f;save()};
+    lab.addEventListener('click',tog);
+    lab.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();tog()}});
+  });
+})();
 </script>
 </body>
 </html>

@@ -238,7 +238,7 @@ textarea{width:100%;min-height:110px;resize:vertical;box-sizing:border-box;backg
     <div class="m"><span id="eTl">耗時</span><b id="eT">—</b><small id="eTs"></small></div>
     <div class="m"><span id="eCl">驗證費用（USD）</span><b id="eC">—</b><small id="eCs"></small></div>
     <div class="m"><span id="eAl">準確率</span><b id="eA">—</b><small id="eAs"></small></div>
-    <div class="m recall" id="eR" style="display:none"><span>召回率（重現率）</span><b>56%</b><small>三星公告名單 2,381 件中，工具未漏檢 1,333 件；同方法、未調權重</small></div>
+    <div class="m recall" id="eR" style="display:none"><span>召回率</span><b>≈ 83% ／ 56%</b><small>黃金集驗證高通名單：≈ 83%（由精確率 88%、F1 85.5% 換算）<br>同方法未調權重、三星公告名單重現率：56%（工具未漏檢 1,333 件）</small></div>
   </div>
   <div id="eBars" hidden></div>
   <div class="poolcost" id="poolCost"></div>
@@ -438,7 +438,7 @@ function cosmosBuild(){const c=COS.cv,pad=60;c.width=(W+pad*2)*DPR;c.height=(H+p
   const w=W+pad*2,h=H+pad*2,R=(a,b)=>a+Math.random()*(b-a);
   g.fillStyle="#02060f";g.fillRect(0,0,w,h);
   // 星雲（冷色、低飽和）
-  [[.18,.28,.55,"70,62,190",.20],[.82,.72,.5,"18,110,160",.14],[.62,.18,.35,"120,60,170",.08],[.3,.85,.4,"30,70,150",.10]].forEach(([x,y,r,c,a])=>{
+  [[.18,.28,.55,"40,60,90",.18],[.82,.72,.5,"18,90,120",.12],[.62,.18,.35,"120,90,50",.07],[.3,.85,.4,"30,60,90",.10]].forEach(([x,y,r,c,a])=>{
     const gr=g.createRadialGradient(w*x,h*y,0,w*x,h*y,Math.max(w,h)*r);gr.addColorStop(0,`rgba(${c},${a})`);gr.addColorStop(.5,`rgba(${c},${a*.35})`);gr.addColorStop(1,`rgba(${c},0)`);g.fillStyle=gr;g.fillRect(0,0,w,h)});
   // 銀河帶（斜向）
   g.save();g.translate(w/2,h/2);g.rotate(-.42);
@@ -470,21 +470,60 @@ function drawCosmos(t,now){if(COS.w!==W||COS.h!==H)cosmosBuild();const pad=COS.p
   if(COS.met){const m=COS.met,k=(now-m.t0)/900;if(k>1){COS.met=null;COS.nextMet=now+6000+Math.random()*3000}else{
     const hx=m.x+Math.cos(m.a)*k*W*.35,hy=m.y+Math.sin(m.a)*k*W*.35,tx=hx-Math.cos(m.a)*m.len,ty=hy-Math.sin(m.a)*m.len;
     const lg=ctx.createLinearGradient(tx,ty,hx,hy);lg.addColorStop(0,"rgba(220,235,255,0)");lg.addColorStop(1,`rgba(235,245,255,${.8*(1-k)})`);ctx.strokeStyle=lg;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(hx,hy);ctx.stroke()}}}
-function drawRingDust(t,front){const R=SAT.R;ctx.fillStyle="#d7e6ff";
+function drawRingDust(t,front){const R=SAT.R;ctx.fillStyle="#f3e2bd";
   for(const d of COS.dust){const a=d.a+t*.00009*d.sp/d.k;const z=Math.sin(a);if((z>=0)!==front)continue;
     const x=SAT.x+Math.cos(a)*R*d.k,y=SAT.y+Math.sin(a)*R*d.k*.27-Math.cos(a)*R*d.k*.06;ctx.globalAlpha=d.o*(front?1:.5);ctx.fillRect(x,y,d.s,d.s)}
   ctx.globalAlpha=1}
+/* ======== 土星錨點：金色機械環儀（參考 THALASSA 風格）——暗色行星＋金色邊光、細密金環、直立刻度環、全息底座、漂浮碎片 ======== */
+const GOLDC=(a)=>`rgba(232,194,122,${a})`,WARM=(a)=>`rgba(255,236,196,${a})`;
+const DEB=[];for(let i=0;i<26;i++)DEB.push({x:Math.random(),y:Math.random(),s:3+Math.random()*9,a:Math.random()*6.28,va:(Math.random()-.5)*.0006,vx:(Math.random()-.5)*.00002,sides:3+Math.floor(Math.random()*3),z:Math.random()});
+function satEllipse(k,flat,a0,a1){ctx.beginPath();ctx.ellipse(SAT.x,SAT.y,SAT.R*k,SAT.R*k*flat,-.09,a0,a1)}
+function drawThalBack(t,now){const R=SAT.R,x=SAT.x,y=SAT.y;
+  // 漂浮碎片（遠層）
+  for(const d of DEB){if(d.z>.5)continue;drawDebris(d,t)}
+  // 全息底座
+  const by=y+R*1.95;ctx.save();ctx.translate(x,by);
+  for(let i=0;i<5;i++){const r=R*(1.05+i*.22),p=((now*.00012)+i*.2)%1;ctx.strokeStyle=i%2?`rgba(120,220,255,${.22+.12*Math.sin(now*.002+i)})`:GOLDC(.5-.07*i);ctx.lineWidth=i===0?1.6:1;
+    ctx.beginPath();ctx.ellipse(0,0,r,r*.2,0,0,6.28);ctx.stroke()}
+  const bg=ctx.createRadialGradient(0,0,0,0,0,R*1.4);bg.addColorStop(0,"rgba(120,200,255,.12)");bg.addColorStop(1,"rgba(120,200,255,0)");ctx.fillStyle=bg;ctx.beginPath();ctx.ellipse(0,0,R*1.4,R*.28,0,0,6.28);ctx.fill();
+  ctx.strokeStyle=GOLDC(.18);ctx.setLineDash([2,6]);ctx.beginPath();ctx.moveTo(0,-R*.15);ctx.lineTo(0,-(by-y)+R*1.02);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+  // 細密金環（後半）
+  drawFineRings(false,now);
+  // 直立刻度環（後半）
+  drawGate(false,now);
+  // 行星本體：暗色球＋金色邊光＋大氣
+  const body=ctx.createRadialGradient(x-R*.3,y-R*.35,R*.05,x,y,R);body.addColorStop(0,"rgba(52,78,86,.95)");body.addColorStop(.7,"rgba(12,22,30,.97)");body.addColorStop(1,"rgba(4,8,14,1)");
+  ctx.fillStyle=body;ctx.beginPath();ctx.arc(x,y,R*1.08,0,6.28);ctx.fill();
+  ctx.save();ctx.shadowColor="#ffd9a0";ctx.shadowBlur=22;ctx.strokeStyle=WARM(.9);ctx.lineWidth=2.6;ctx.beginPath();ctx.arc(x,y,R*1.075,Math.PI*.62,Math.PI*1.42);ctx.stroke();
+  ctx.lineWidth=1;ctx.strokeStyle=GOLDC(.55);ctx.beginPath();ctx.arc(x,y,R*1.02,Math.PI*.5,Math.PI*1.6);ctx.stroke();ctx.restore();
+  const atm=ctx.createRadialGradient(x,y,R*.95,x,y,R*1.35);atm.addColorStop(0,GOLDC(.14));atm.addColorStop(1,GOLDC(0));ctx.fillStyle=atm;ctx.beginPath();ctx.arc(x,y,R*1.35,0,6.28);ctx.fill()}
+function drawFineRings(front,now){const a0=front?0:Math.PI,a1=front?Math.PI:Math.PI*2;
+  for(let i=0;i<34;i++){const k=1.3+i*.04,bright=i===6||i===15||i===27;ctx.strokeStyle=bright?WARM(front?.9:.5):GOLDC((front?.4:.2)*(1-i/50));ctx.lineWidth=bright?1.6:.7;
+    if(bright){ctx.save();ctx.shadowColor="#ffd9a0";ctx.shadowBlur=8}satEllipse(k,.2,a0,a1);ctx.stroke();if(bright)ctx.restore()}
+  // 掃過環面的光點
+  const p=(now*.00008)%1,ang=a0+(a1-a0)*p,k=1.9;const px=SAT.x+Math.cos(ang)*SAT.R*k,py=SAT.y+Math.sin(ang)*SAT.R*k*.2;
+  const g=ctx.createRadialGradient(px,py,0,px,py,18);g.addColorStop(0,WARM(front?.8:.4));g.addColorStop(1,WARM(0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(px,py,18,0,6.28);ctx.fill()}
+function drawGate(front,now){const R=SAT.R,x=SAT.x,y=SAT.y,rx=R*.5,ry=R*1.62,cx=x-R*.22;
+  ctx.save();ctx.translate(cx,y);ctx.rotate(-.05);
+  const a0=front?-Math.PI/2:Math.PI/2,a1=front?Math.PI/2:Math.PI*1.5;
+  ctx.save();ctx.shadowColor="#e8c27a";ctx.shadowBlur=front?14:4;ctx.strokeStyle=GOLDC(front?.95:.5);ctx.lineWidth=R*.09;ctx.beginPath();ctx.ellipse(0,0,rx,ry,0,a0,a1);ctx.stroke();ctx.restore();
+  ctx.strokeStyle="rgba(10,14,20,.75)";ctx.lineWidth=R*.035;ctx.beginPath();ctx.ellipse(0,0,rx,ry,0,a0,a1);ctx.stroke();
+  // 刻度
+  ctx.strokeStyle=WARM(front?.8:.35);ctx.lineWidth=1;const off=now*.00005;ctx.beginPath();
+  for(let i=0;i<96;i++){const a=i/96*6.283+off;const inF=Math.cos(a)>=0;if(inF!==front)continue;const c=Math.cos(a),s=Math.sin(a),L=i%8===0?.11:.05;
+    ctx.moveTo(c*rx*(1-L*1.6),s*ry*(1-L));ctx.lineTo(c*rx*(1-L*.4),s*ry*(1-L*.25))}ctx.stroke();
+  ctx.strokeStyle="rgba(150,210,255,"+(front?.5:.25)+")";ctx.setLineDash([4,5]);ctx.lineWidth=.8;ctx.beginPath();ctx.ellipse(0,0,rx*.82,ry*.9,0,a0,a1);ctx.stroke();ctx.setLineDash([]);
+  if(front){ctx.shadowColor="#ffd9a0";ctx.shadowBlur=18;ctx.strokeStyle=WARM(.9);ctx.lineWidth=1.6;ctx.beginPath();ctx.ellipse(0,0,rx*1.06,ry*1.03,0,-Math.PI*.42,-Math.PI*.12);ctx.stroke()}
+  ctx.restore()}
+function drawDebris(d,t){const x=(d.x+t*d.vx+10)%1*W,y=d.y*H,s=d.s*(.6+d.z*.8);d.a+=d.va*16;
+  ctx.save();ctx.translate(x,y);ctx.rotate(d.a);ctx.beginPath();for(let i=0;i<d.sides;i++){const a=i/d.sides*6.283,r=s*(.7+.3*((i*7)%3)/2);i?ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r):ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r)}ctx.closePath();
+  ctx.fillStyle=d.z>.5?"rgba(26,30,36,.95)":"rgba(18,22,28,.8)";ctx.fill();ctx.strokeStyle=GOLDC(d.z>.5?.55:.3);ctx.lineWidth=.8;ctx.stroke();ctx.restore()}
+function drawThalFront(t,now){drawFineRings(true,now);drawGate(true,now);for(const d of DEB){if(d.z<=.5)continue;drawDebris(d,t)}}
 function drawSaturnBg(){
-  const R=SAT.R;ctx.strokeStyle="rgba(159,216,255,.18)";ctx.lineWidth=1;
-  [[1.65,"衛星環 B · 引用網絡"],[2.35,"外環 A · JCT-VC 提案人"]].forEach(([k,l])=>{ctx.beginPath();ctx.ellipse(SAT.x,SAT.y,R*k,R*k*.27,-.06,0,6.28);ctx.stroke();
-    if(phase>=3){ctx.font="500 11px 'Noto Sans TC',sans-serif";ctx.fillStyle="#9fb6c2";ctx.textAlign="left";ctx.fillText(l,SAT.x+R*k*.72,SAT.y+R*k*.27*.75+14)}});
-  // 環面輝光
-  ctx.save();ctx.translate(SAT.x,SAT.y);ctx.rotate(-.06);ctx.scale(1,.27);const rg=ctx.createRadialGradient(0,0,R*1.2,0,0,R*2.8);rg.addColorStop(0,"rgba(120,170,255,0)");rg.addColorStop(.35,"rgba(120,170,255,.07)");rg.addColorStop(.7,"rgba(150,140,255,.05)");rg.addColorStop(1,"rgba(150,140,255,0)");ctx.fillStyle=rg;ctx.beginPath();ctx.arc(0,0,R*2.8,0,6.28);ctx.fill();ctx.restore();
-  // 核心大氣層：外圈冷光暈＋受光面
-  const g0=ctx.createRadialGradient(SAT.x,SAT.y,R*.6,SAT.x,SAT.y,R*3.2);g0.addColorStop(0,"rgba(60,140,255,.12)");g0.addColorStop(1,"rgba(60,140,255,0)");ctx.fillStyle=g0;ctx.beginPath();ctx.arc(SAT.x,SAT.y,R*3.2,0,6.28);ctx.fill();
-  const g=ctx.createRadialGradient(SAT.x-R*.35,SAT.y-R*.4,0,SAT.x,SAT.y,R*1.3);g.addColorStop(0,"rgba(140,210,255,.3)");g.addColorStop(.6,"rgba(79,179,255,.12)");g.addColorStop(1,"rgba(79,179,255,0)");ctx.fillStyle=g;ctx.beginPath();ctx.arc(SAT.x,SAT.y,R*1.3,0,6.28);ctx.fill();
+  const R=SAT.R;
+  [[1.65,"衛星環 B · 引用網絡"],[2.35,"外環 A · JCT-VC 提案人"]].forEach(([k,l])=>{if(phase>=3){ctx.font="500 11px 'Noto Sans TC',sans-serif";ctx.fillStyle="#d9c49a";ctx.textAlign="left";ctx.fillText(l,SAT.x+R*k*.72,SAT.y+R*k*.27*.75+14)}});
   const n=fish.filter(f=>vis(f)&&f.who==="q").length+fish.filter(f=>vis(f)&&f.who==="n").length;
-  label(SAT.x,SAT.y-R*(phase===0?2.1:1.45)-14,PHASES[phase][1],n.toLocaleString()+" 條",COL.q)}
+  label(SAT.x,SAT.y-R*(phase===0?2.1:1.95)-14,PHASES[phase][1],n.toLocaleString()+" 條",COL.q)}
 function label(x,y,title,sub,col){ // 儀器標籤：細框、角刻、主標題＋寬距等寬副標
   ctx.save();ctx.textAlign="center";ctx.font="600 13px 'Noto Sans TC',sans-serif";const tw=ctx.measureText(title).width;
   ctx.font="500 10px 'IBM Plex Mono',monospace";if("letterSpacing" in ctx)ctx.letterSpacing="1px";const sw=ctx.measureText(sub).width;
@@ -509,13 +548,13 @@ function frame(now){
   if(mode==="eco"){ECO.tt+=dtt*sp;ecoFrame(ECO.tt,dtt*sp);requestAnimationFrame(frame);return}
   simT+=dtt*sp;const t=simT;step(t);
   ctx.fillStyle="#050c18";ctx.fillRect(0,0,W,H);
-  if(mode==="vortex")drawVortexBg(t);else{drawCosmos(t,now);drawRingDust(t,false);drawSaturnBg();}
+  if(mode==="vortex")drawVortexBg(t);else{drawCosmos(t,now);drawThalBack(t,now);drawRingDust(t,false);drawSaturnBg();}
   fadeTrail();ctx=trx;ctx.globalCompositeOperation="lighter";
   if(mode==="vortex")drawStreams(t);
-  if(mode==="saturn"){const back=[],front=[];for(const f of fish)((f.z??0)<0?back:front).push(f);drawBatch(back,.55);drawBatch(front,1)}
+  if(mode==="saturn"){const back=[],front=[];for(const f of fish)((f.z??0)<0?back:front).push(f);drawBatch(back,.28);drawBatch(front,.62)}
   else drawBatch(fish,1);
   ctx.globalCompositeOperation="source-over";ctx=MAIN;ctx.globalCompositeOperation="lighter";ctx.drawImage(trail,0,0,W,H);ctx.globalCompositeOperation="source-over";
-  if(mode==="saturn")drawRingDust(t,true);
+  if(mode==="saturn"){drawRingDust(t,true);drawThalFront(t,now)}
   if(mode==="vortex")drawVortexWaves(t);
   for(const f of fish){if(!f.big||f.alpha<.3)continue;const B=f.big,sz=4.4+Math.min(2,Math.sqrt(B.cites)/15),br=.5+.5*Math.sin(now*.0032+B.rank*1.7),c=B.pool==="q"?["#22e3ff","#c9fbff"]:["#ffd166","#fff1c2"];
     ctx.strokeStyle=c[0];ctx.globalAlpha=.6*(1-br);ctx.lineWidth=1;ctx.beginPath();ctx.arc(f.x,f.y,sz*(1.4+2.6*br),0,6.28);ctx.stroke();ctx.globalAlpha=1;
@@ -1016,7 +1055,7 @@ function ecoStart(i){ECO.step=i;ECO.tt=0;ECO.done=0;ECO.floats=[];ECO.insp={x:W*
   const N=ECO.base,mh=N*H_PER;
   const notes=["一位專家一次看一件，人工時間以「假設每件 0.5 小時」估算，專利池等級驗證每件 $"+ECO.per.toLocaleString()+"（Via Licensing 收費，見 TCL v. Ericsson 判決）；法院案中的 Concur IP 快篩平均每件約 20 分鐘、$100，只算粗篩。白點是已驗證的家族，飄起的金額是每一件的費用。照這個速度，"+N.toLocaleString()+" 件要 "+Math.round(mh).toLocaleString()+" 小時，約 "+(mh/H_YEAR).toFixed(1)+" 年。",
     "本工具以語意向量＋8 維度評分的三階段漏斗一次掃過全池，聲納掃到的魚依必要性分數上色。瓶頸在資料清洗，不在算力，全池 72 小時完成。",
-    "兩個數字要分開看：準確率 88% 是用來驗證高通名單；再用同樣的方法、不調整權重，拿專利池公告的三星 2,381 件當答案卷，重現率 56%（工具未漏檢 1,333 件）。綠魚＝工具未漏檢，暗金框＝漏檢的 1,048 件。答案卷是公告清單，不需人工標註。",
+    "兩個數字要分開看：準確率 88%（F1 85.5%、換算召回率約 83%、回測 89.2%）是黃金集驗證高通名單的結果；再用同樣的方法、不調整權重，拿專利池公告的三星 2,381 件當答案卷，重現率 56%（工具未漏檢 1,333 件）。綠魚＝工具未漏檢，暗金框＝漏檢的 1,048 件。答案卷是公告清單，不需人工標註。",
     "同一批專利，兩種做法的時間與費用。人工時間假設每件 0.5 小時；工具費用為運算帳單換算；人工費用依你設定的單件金額。"];
   document.getElementById('eNote').textContent=notes[i];
   if(i===3)renderBars()}
@@ -1027,8 +1066,8 @@ function renderBars(){const N=ECO.base,mh=N*H_PER,mc=N*ECO.per,ac=N*AI_PER;
    row("費用",money(mc),money(ac)+"（依帳單 $11,035／1.7 萬件換算）",72,Math.max(.4,72*ac/mc),"#ff6b6b","#3ddcff")+
    `<div class="brow"><span>省下</span><div class="btrack"><div class="bline"><i style="width:72%;background:#ffd166"></i><em>${money(mc-ac)} · ${Math.round(mh-AI_H).toLocaleString()} 小時</em></div></div></div>`+
    row("可重驗性","< 30%","100%",21.6,72,"#ff6b6b","#3ddcff")+
-   row("準確率","傳統交叉驗證 76%","驗證高通名單 88%",72*.76,72*.88,"#ff6b6b","#3ddcff")+
-   `<div class="brow"><span>召回率</span><div class="btrack"><div class="bline"><i style="width:${72*REC}%;background:#cdeeff"></i><em>工具 56%（三星公告 2,381 件中未漏檢 ${TP.toLocaleString()} 件；同方法未調權重）</em></div></div></div>`}
+   row("準確率","傳統交叉驗證 76%","回測 89.2%（精確率 88%、F1 85.5%；黃金集驗證高通名單）",72*.76,72*.892,"#ff6b6b","#3ddcff")+
+   `<div class="brow"><span>召回率</span><div class="btrack"><div class="bline"><i style="width:${72*.83}%;background:#cdeeff"></i><em>工具 ≈ 83%（黃金集驗證高通名單，由 F1 換算）</em></div><div class="bline"><i style="width:${72*REC}%;background:#9fd0f0"></i><em>工具 56%（同方法未調權重，三星公告 2,381 件未漏檢 ${TP.toLocaleString()} 件）</em></div></div></div>`}
 function setM(t,ts,c,cs,al,a,as,tl,cl){const g=id=>document.getElementById(id);g('eTl').textContent=tl||'耗時';g('eCl').textContent=cl||'驗證費用（USD）';g('eT').textContent=t;g('eTs').textContent=ts;g('eC').textContent=c;g('eCs').textContent=cs;g('eAl').textContent=al;g('eA').textContent=a;g('eAs').textContent=as}
 function ecoFrame(t,dt){
   if(!ECO.built||ECO.w!==W||ECO.h!==H)ecoBuild();
@@ -1053,7 +1092,7 @@ function ecoFrame(t,dt){
       money(p*ac),"依 API 帳單 $11,035／1.7 萬件換算，約 $"+AI_PER.toFixed(2)+"／件","可重驗性","100%","同一參數檔重跑，結果誤差 0%")}
   else if(st===2){const p=Math.min(1,t/4500);
     setM(Math.round(p*TP).toLocaleString()+" / "+GOLD.toLocaleString(),"三星公告名單中工具未漏檢的件數（重現率 56%，同方法未調權重）",
-      "$0","答案卷＝專利池公告清單，不需人工標註","準確率（驗證高通名單）","88%","與三星重現率 56% 為不同檢驗","工具未漏檢的三星 SEP","人工標註成本");
+      "$0","答案卷＝專利池公告清單，不需人工標註","準確率（黃金集驗證高通名單）","88%","F1 85.5%；回測準確率 89.2%（傳統方法 76%）","工具未漏檢的三星 SEP","人工標註成本");
     ECO.p2=p}
   else{setM("","","","","","","")}
   // draw fish into trail

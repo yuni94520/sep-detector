@@ -518,14 +518,16 @@ cv.addEventListener('pointermove',e=>{if(mode==="net"||mode==="eco")return;
 cv.addEventListener('pointerleave',()=>{hover=null;tip.hidden=true});
 
 /* ======== 撒網 vs 燈塔 ======== */
-const NET={step:0,tt:0,fish:[],bagX:0,bagY:0};
+const NET={step:4,tt:0,fish:[],bagX:0,bagY:0};
 const NET_STEPS=[
- ["①","大網：IPC＋時間段","~5,000+","以 IPC（H04N19）加申請時間段、或關鍵字加 IPC 撈，一網下去五千多筆——H04N19 涵蓋所有視訊編碼，連 1996 年的專利都在裡面。撈的時候每條魚看起來都一樣；上岸後抽 100 篇人工判讀，0 篇是 SEP。金魚是示意的極少數真 SEP。若整網委外驗證：5,000 筆 × US$10,000＝US$5,000 萬，幾乎都花在不是 SEP 的專利上。"],
- ["②","細網：PQAI 語意對標","~1,300","網眼換成語意，純度變高，只留下技術語言區的真 SEP。但 1,744 條真 SEP 躲在法律語言（上位化用語）的深水區，網子撞上結構性天花板下不去。"],
- ["③","土星燈塔：錨點輻射","3,044","以 1,300 條核心為燈塔，沿引用網絡（B 光束）與 JCT-VC 提案人（A 光束）照進深水。被照到的真 SEP 浮上來入軌，雜訊魚照到也不發光。金魚是被 2 個以上 Unit 同時找到的家族（全名單共 1,112 件）。"],
- ["④","聚光燈：先驗 152 件核心","152","燈塔收斂成聚光燈：被引 51 次以上的 152 件先交人工驗證，以專利池每件 10,000 美元計約 152 萬美元，只占 HEVC 原始池全驗（4.31 億美元）的 0.35%。示範魚 US 2014/0286413 A1（Disabling sign data hiding）被引 88 次、核心等級，但法律狀態是 Abandoned（已放棄）——這正是人工複核要把關的地方。"]];
+ ["②","大網：IPC＋時間段","~5,000+","以 IPC（H04N19）加申請時間段、或關鍵字加 IPC 撈，一網下去五千多筆——H04N19 涵蓋所有視訊編碼，連 1996 年的專利都在裡面。撈的時候每條魚看起來都一樣；上岸後抽 100 篇人工判讀，0 篇是 SEP。金魚是示意的極少數真 SEP。若整網委外驗證：5,000 筆 × US$10,000＝US$5,000 萬，幾乎都花在不是 SEP 的專利上。"],
+ ["③","細網：PQAI 語意對標","~1,300","網眼換成語意，純度變高，只留下技術語言區的真 SEP。但 1,744 條真 SEP 躲在法律語言（上位化用語）的深水區，網子撞上結構性天花板下不去。"],
+ ["④","土星燈塔：錨點輻射","3,044","以 1,300 條核心為燈塔，沿引用網絡（B 光束）與 JCT-VC 提案人（A 光束）照進深水。被照到的真 SEP 浮上來入軌，雜訊魚照到也不發光。金魚是被 2 個以上 Unit 同時找到的家族（全名單共 1,112 件）。"],
+ ["⑤","聚光燈：先驗 152 件核心","152","燈塔收斂成聚光燈：被引 51 次以上的 152 件先交人工驗證，以專利池每件 10,000 美元計約 152 萬美元，只占 HEVC 原始池全驗（4.31 億美元）的 0.35%。示範魚 US 2014/0286413 A1（Disabling sign data hiding）被引 88 次、核心等級，但法律狀態是 Abandoned（已放棄）——這正是人工複核要把關的地方。"]];
+NET_STEPS[4]=["①","對照：撒網 vs 燈塔","上／下","上半部：傳統 IPC＋時間段撒網，網子撈起一大堆，但有顏色的真 SEP 從網眼溜走，留在網裡的幾乎都是灰色雜訊。下半部：燈塔先掃海、找到真 SEP 最密集的群聚後鎖定照射，只對光圈裡的魚下網——撈起來的都是有色的 SEP。魚數為示意。"];
+const NET_ORDER=[4,0,1,2,3];
 const netBox=document.getElementById('netSteps');
-NET_STEPS.forEach((s,i)=>{const b=document.createElement('button');b.type='button';b.className='ph';
+NET_ORDER.forEach(i=>{const s=NET_STEPS[i];const b=document.createElement('button');b.type='button';b.className='ph';b.dataset.i=i;
   b.innerHTML=`<span class="n">${s[0]}</span><span class="t"></span><span class="c">${s[2]}</span>`;b.querySelector('.t').textContent=s[1];b.onclick=()=>netStart(i);netBox.appendChild(b)});
 document.getElementById('netReplay').onclick=()=>netStart(NET.step);
 const zone=()=>({sTop:H*.2,sBot:H*.5,ceil:H*.535,dTop:H*.58,dBot:H*.93});
@@ -541,14 +543,93 @@ function netBuild(){
   /* 撒網情境：IPC＋時間段撈到的魚中真 SEP 極少（示意） */NET.fish.forEach(f=>{f.sep0=rnd()<.012});[...real].sort(()=>rnd()-.5).slice(0,152).forEach((f,i)=>{f.hot=true;f.hi=i});NET.ex=real.find(f=>f.hot&&f.kind==="deep")}
 function netStart(i){NET.step=i;NET.tt=0;NET.checked=0;if(!NET.fish.length||NET.lastW!==W||NET.lastH!==H){netBuild();NET.lastW=W;NET.lastH=H}
   NET.fish.forEach(f=>{f.caught=false;f.lit=null;f.bx=(rnd()-.5);f.by=rnd()});
-  if(i>=2)NET.fish.forEach(f=>{if(f.kind==="core")f.caught=true});
+  if(i>=2&&i<4)NET.fish.forEach(f=>{if(f.kind==="core")f.caught=true});
+  if(i===4)splitStart();
   if(i===3)NET.fish.forEach(f=>{if(f.kind==="deep")f.lit=f.multi?"AB":f.role});
-  [...netBox.children].forEach((b,j)=>b.setAttribute('aria-pressed',j===i));
+  [...netBox.children].forEach(b=>b.setAttribute('aria-pressed',+b.dataset.i===i));
   document.getElementById('netNote').textContent=NET_STEPS[i][3];
-  document.getElementById('nl1').textContent=i===3?"優先人工驗證":i===2?"入軌真 SEP":"網中魚數";
-  document.getElementById('nl2').textContent=i===0?"抽驗 100 篇中的 SEP":i===1?"深水未撈到的真 SEP":i===2?"被 2+ 個 Unit 找到（金）":"驗證費用（每件 1 萬美元）"}
+  document.getElementById('nl1').textContent=i===4?"撒網留住的 SEP":i===3?"優先人工驗證":i===2?"入軌真 SEP":"網中魚數";
+  document.getElementById('nl2').textContent=i===4?"燈塔撈起的 SEP":i===0?"抽驗 100 篇中的 SEP":i===1?"深水未撈到的真 SEP":i===2?"被 2+ 個 Unit 找到（金）":"驗證費用（每件 1 萬美元）"}
+/* ======== 對照：上＝撒網（有色的真 SEP 從網眼溜走）／下＝燈塔（先照最密處再撈） ======== */
+const SPL={top:[],bot:[],w:0,h:0};
+const splitZ=()=>{const tb=(document.getElementById('top').getBoundingClientRect().bottom||0),t0=Math.max(H*.2,tb+(W<860?70:40)),b1=H-(W<860?120:60),span=b1-t0,t1=t0+span*.44,b0=t0+span*.56;return {t0,t1,b0,b1,mid:(t1+b0)/2}};
+const SPL_CL=[[.6,.5,.07,.62],[.33,.32,.05,.24],[.84,.72,.04,.14]]; // 下半部 SEP 群聚（x,y,半徑,占比）：第一群最多
+function splitBuild(){const z=splitZ(),AC=Object.values(ARM_COL),g=()=>(rnd()+rnd()+rnd()-1.5)/1.5;SPL.top=[];SPL.bot=[];
+  const mk2=(hx,hy,sep,i)=>({hx,hy,x:hx,y:hy,vx:0,vy:0,ph:rnd()*6.28,jit:rnd(),sep,col:sep?AC[i%AC.length]:null});
+  for(let i=0;i<1300;i++){const sep=rnd()<.08;SPL.top.push(mk2(W*(.04+rnd()*.92),z.t0+rnd()*(z.t1-z.t0),sep,i))}
+  for(let i=0;i<1300;i++){const sep=rnd()<.08;let hx,hy;
+    if(sep){const c=pickW(SPL_CL,c=>c[3]);hx=W*(c[0]+g()*c[2]);hy=z.b0+(z.b1-z.b0)*(c[1]+g()*c[2]*2.2)}else{hx=W*(.04+rnd()*.92);hy=z.b0+rnd()*(z.b1-z.b0)}
+    const f=mk2(hx,Math.max(z.b0+4,Math.min(z.b1-4,hy)),sep,i);f.cl=sep?SPL_CL.findIndex(c=>Math.hypot(hx/W-c[0],(hy-z.b0)/(z.b1-z.b0)-c[1])<c[2]*2.5):-1;SPL.bot.push(f)}
+  SPL.w=W;SPL.h=H}
+function splitStart(){if(SPL.w!==W||SPL.h!==H||!SPL.top.length)splitBuild();
+  for(const f of SPL.top){f.caught=false;f.esc=0;f.x=f.hx;f.y=f.hy}for(const f of SPL.bot){f.got=false;f.x=f.hx;f.y=f.hy}}
+function splitFrame(now){if(SPL.w!==W||SPL.h!==H){splitBuild();splitStart()}const t=NET.tt,z=splitZ();
+  ctx.fillStyle="#0a2142";ctx.fillRect(0,0,W,H);
+  let g=ctx.createLinearGradient(0,z.t0,0,z.t1);g.addColorStop(0,"#123a6e");g.addColorStop(1,"#0c2a52");ctx.fillStyle=g;ctx.fillRect(0,z.t0-24,W,z.t1-z.t0+30);
+  g=ctx.createLinearGradient(0,z.b0,0,z.b1);g.addColorStop(0,"#0c2a52");g.addColorStop(1,"#081b38");ctx.fillStyle=g;ctx.fillRect(0,z.b0-6,W,z.b1-z.b0+20);
+  // 分隔線
+  ctx.strokeStyle="rgba(230,239,243,.5)";ctx.setLineDash([8,6]);ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(0,z.mid);ctx.lineTo(W,z.mid);ctx.stroke();ctx.setLineDash([]);
+  const lx=W<860?16:296;
+  // ---------- 上：撒網 ----------
+  const dur=6500,p=Math.min(t/dur,1),front=-W*.2+p*W*1.3,netW=W*.26,nT=z.t0-6,nB=z.t1+6;
+  const bagX=Math.min(W*.86,Math.max(W*.2,front-netW*.5)),bagY=(nT+nB)/2;let inBag=0,escN=0,sepAll=0;
+  for(const f of SPL.top){let tx,ty;
+    if(!f.caught&&p<1&&f.x<front&&f.x>front-netW){f.caught=true;f.ct=t;f.bx=rnd()-.5;f.by=rnd()-.5}
+    if(f.sep)sepAll++;
+    if(f.caught&&f.sep&&!f.esc&&t-f.ct>350+f.jit*900){f.esc=t;f.ex=f.x+(rnd()<.5?-1:1)*W*(.08+rnd()*.12);f.ey=Math.max(z.t0,Math.min(z.t1,f.y+(rnd()-.5)*90))}
+    if(f.esc){tx=f.ex+Math.cos(t*.0015+f.ph)*14;ty=f.ey+Math.sin(t*.002+f.ph)*8;escN++}
+    else if(f.caught){const r=(z.t1-z.t0)*.42;tx=bagX+f.bx*r*1.5;ty=bagY+f.by*r*1.6;inBag++}
+    else{tx=f.hx+Math.cos(t*.0004+f.ph)*12;ty=f.hy+Math.sin(t*.0006+f.ph)*5}
+    f.vx=f.vx*.8+(tx-f.x)*(f.esc?.05:.08);f.vy=f.vy*.8+(ty-f.y)*(f.esc?.05:.08);f.x+=f.vx;f.y+=f.vy;f.ph+=.12}
+  const paintL=(arr,col,a,s)=>{if(!arr.length)return;ctx.globalAlpha=a;ctx.fillStyle=col;ctx.beginPath();arr.forEach(f=>fishPath(f,s));ctx.fill();ctx.globalAlpha=1};
+  paintL(SPL.top.filter(f=>!f.sep&&!f.caught),"#5f7584",.75,2.5);paintL(SPL.top.filter(f=>!f.sep&&f.caught),"#8796a0",.9,2.5);
+  const byc=new Map();SPL.top.filter(f=>f.sep).forEach(f=>{(byc.get(f.col)||byc.set(f.col,[]).get(f.col)).push(f)});
+  for(const[c,arr]of byc)paintL(arr,c,.95,3.1);
+  // 逃脫閃光
+  SPL.top.forEach(f=>{if(f.esc&&t-f.esc<700){ctx.strokeStyle=`rgba(255,255,255,${1-(t-f.esc)/700})`;ctx.lineWidth=1;ctx.beginPath();ctx.arc(f.x,f.y,6+(t-f.esc)/60,0,6.28);ctx.stroke()}});
+  // 網
+  {const nx=p<1?front-netW:bagX-netW*.5,nw=netW,ny=nT,nh=nB-nT;ctx.strokeStyle="rgba(220,230,236,.4)";ctx.lineWidth=1;const mesh=24;
+    ctx.beginPath();for(let x=0;x<=nw;x+=mesh){ctx.moveTo(nx+x,ny);ctx.quadraticCurveTo(nx+x-12,ny+nh*.5,nx+x,ny+nh)}for(let y=0;y<=nh;y+=mesh){ctx.moveTo(nx,ny+y);ctx.lineTo(nx+nw,ny+y)}ctx.stroke();
+    ctx.strokeStyle="rgba(220,230,236,.75)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(nx+nw,ny);ctx.lineTo(nx+nw,ny+nh);ctx.moveTo(nx+nw,ny);ctx.lineTo(nx+nw+30,ny-40);ctx.stroke()}
+  if(p>=1)label(bagX,z.t0+22,"網中 "+inBag.toLocaleString()+" 條 · SEP 0","有顏色的真 SEP 從網眼溜走 "+escN+" 條","#8796a0");
+  // ---------- 下：燈塔 ----------
+  const Lx=W<860?W*.1:Math.max(W*.08,40),Ly=z.b1-6,C=SPL_CL[0],cx=W*C[0],cy=z.b0+(z.b1-z.b0)*C[1],R=W*C[2]*1.35,Ry=(z.b1-z.b0)*C[2]*2.2*1.45;
+  const aT=Math.atan2(cy-Ly,cx-Lx),sweep=t<2600,lock=Math.min(1,Math.max(0,(t-2600)/900));
+  const a=sweep?(-Math.PI*.12-Math.PI*.36*(.5+.5*Math.sin(t*.0024))):(-Math.PI*.12-Math.PI*.36*(.5+.5*Math.sin(2600*.0024)))*(1-lock)+aT*lock;
+  const grab=t>3800,scoopX=Lx+W*.1,scoopY=z.b0+(z.b1-z.b0)*.35;let got=0,lit=0;
+  for(const f of SPL.bot){let tx,ty;const dx=f.x-Lx,dy=f.y-Ly;let d=Math.abs(Math.atan2(dy,dx)-a);d=Math.min(d,6.283-d);
+    const inBeam=d<(lock>=1?.13:.08);const inSpot=lock>=1&&((f.hx-cx)/R)**2+((f.hy-cy)/Ry)**2<1;
+    if(f.sep&&(inBeam||inSpot))lit++;
+    if(grab&&f.sep&&inSpot&&!f.got&&t-3800>f.jit*1600)f.got=true;
+    if(f.got){const ang=f.ph*.3+t*.0012;tx=scoopX+Math.cos(ang)*(16+f.jit*30);ty=scoopY+Math.sin(ang)*(10+f.jit*18);got++}
+    else{tx=f.hx+Math.cos(t*.0004+f.ph)*12;ty=f.hy+Math.sin(t*.0006+f.ph)*5}
+    f.vx=f.vx*.8+(tx-f.x)*.06;f.vy=f.vy*.8+(ty-f.y)*.06;f.x+=f.vx;f.y+=f.vy;f.ph+=.12;f.lit=inBeam||inSpot}
+  paintL(SPL.bot.filter(f=>!f.sep),"#5f7584",.75,2.5);
+  const byb=new Map();SPL.bot.filter(f=>f.sep).forEach(f=>{(byb.get(f.col)||byb.set(f.col,[]).get(f.col)).push(f)});for(const[c,arr]of byb)paintL(arr,c,.95,3.1);
+  // 黑暗＋光束（只蓋下半部）
+  const dk=document.createElement('canvas');dk.width=W;dk.height=H;const d2=dk.getContext('2d');d2.fillStyle="rgba(5,16,36,.72)";d2.fillRect(0,z.mid+2,W,H-z.mid);
+  d2.globalCompositeOperation="destination-out";const len=Math.hypot(W,H);
+  const gg=d2.createRadialGradient(Lx,Ly,0,Lx,Ly,len);gg.addColorStop(0,"rgba(0,0,0,1)");gg.addColorStop(1,"rgba(0,0,0,.3)");d2.fillStyle=gg;
+  const half=lock>=1?.13:.08;d2.beginPath();d2.moveTo(Lx,Ly);d2.arc(Lx,Ly,len,a-half,a+half);d2.closePath();d2.fill();
+  if(lock>0){d2.save();d2.translate(cx,cy);d2.scale(1,Ry/R);const sg=d2.createRadialGradient(0,0,0,0,0,R*1.25);sg.addColorStop(0,`rgba(0,0,0,${lock})`);sg.addColorStop(1,"rgba(0,0,0,0)");d2.fillStyle=sg;d2.beginPath();d2.arc(0,0,R*1.25,0,6.28);d2.fill();d2.restore()}
+  ctx.drawImage(dk,0,0);
+  ctx.save();ctx.beginPath();ctx.rect(0,z.mid+2,W,H-z.mid);ctx.clip();
+  const bg=ctx.createRadialGradient(Lx,Ly,0,Lx,Ly,len*.7);bg.addColorStop(0,"rgba(255,233,170,.35)");bg.addColorStop(1,"rgba(255,233,170,0)");ctx.fillStyle=bg;ctx.beginPath();ctx.moveTo(Lx,Ly);ctx.arc(Lx,Ly,len,a-half,a+half);ctx.closePath();ctx.fill();
+  if(lock>=1){ctx.strokeStyle="rgba(255,209,102,.8)";ctx.setLineDash([5,4]);ctx.lineWidth=1.4;ctx.beginPath();ctx.ellipse(cx,cy,R,Ry,0,0,6.28);ctx.stroke();ctx.setLineDash([])}
+  ctx.restore();
+  // 燈塔本體
+  ctx.fillStyle="#e6eff3";ctx.beginPath();ctx.moveTo(Lx-9,Ly+4);ctx.lineTo(Lx-5,Ly-26);ctx.lineTo(Lx+5,Ly-26);ctx.lineTo(Lx+9,Ly+4);ctx.closePath();ctx.fill();
+  ctx.fillStyle="#ff5f5f";ctx.fillRect(Lx-6,Ly-16,12,4);ctx.fillStyle="#fff4d6";ctx.beginPath();ctx.arc(Lx,Ly-30,6,0,6.28);ctx.fill();
+  // 撈起的 SEP（小網兜）
+  if(got){ctx.strokeStyle="rgba(127,224,208,.7)";ctx.lineWidth=1.2;ctx.beginPath();ctx.ellipse(scoopX,scoopY,58,38,0,0,6.28);ctx.stroke()}
+  if(got&&lock>=1){ctx.strokeStyle="rgba(127,224,208,.45)";ctx.setLineDash([3,5]);ctx.beginPath();ctx.moveTo(cx-R,cy);ctx.lineTo(scoopX+58,scoopY);ctx.stroke();ctx.setLineDash([])}
+  if(lock>=1)label(cx+R*.2,cy+Ry+26,"鎖定最密集的 SEP 群","光圈內 "+lit+" 條有色魚",COL.gold);
+  ctx.textAlign="left";ctx.font="700 14px 'Noto Sans TC',sans-serif";ctx.fillStyle="#cfe0e8";ctx.fillText("傳統：IPC＋時間段 撒網",lx,z.t0-8);ctx.fillStyle="#ffd166";ctx.fillText("本研究：燈塔先照最密處，再下網",lx,z.b0-8);
+  if(got)label(scoopX+20,scoopY-56,"撈起 SEP "+got+" 條","只撈光照到的，雜訊不上網","#7fe0d0");
+  NET.tick=(NET.tick||0)+1;if(NET.tick%6===0){document.getElementById('nc1').textContent="0 / "+sepAll;document.getElementById('nc2').textContent=got.toLocaleString()}}
 const LH=()=>({x:W<860?W*.5:280+(W-610)*.5,y:H*.33,R:Math.min(W,H)*.07});
 function netFrame(now){
+  if(NET.step===4){splitFrame(now);return}
   const t=NET.tt,z=zone(),st=NET.step,L=LH();
   ctx.fillStyle="#0a2142";ctx.fillRect(0,0,W,H);
   // water layers
@@ -645,7 +726,7 @@ function netFrame(now){
   NET.tick=(NET.tick||0)+1;
   if(NET.tick%6===0){document.getElementById('nc1').textContent=(st>=2?orbit:caught).toLocaleString();document.getElementById('nc2').textContent=st===3?"$1.52M":st===0?"0 / "+(NET.checked||0):(st===1?deepLeft:ab).toLocaleString()}
 }
-netStart(0);
+netStart(4);
 /* ======== 四大洋全景：專利池生命週期 ======== */
 // 時間軸依期末報告：H.264/AVC 2003–04 定案；JCT-VC 2010；H.265 2013/04 批准；MPEG LA HEVC 池 2014；HEVC Advance 2015；JVET 探索 2015/10；
 // VVC 徵案 2017/10；Velos Media 2017 成立（高通加入）、2022 解散；JVET 標準化 2018/04；H.266 2020/07 定案；H.267 預計 2028–29。

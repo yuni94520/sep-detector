@@ -1083,8 +1083,8 @@ function ecoFrame(t,dt){
     const I=ECO.insp;if(!I.tgt||I.tgt.chk){let best=null,bd=1e12;for(const f of ECO.fish){if(f.chk)continue;const d=(f.x-I.x)**2+(f.y-I.y)**2;if(d<bd){bd=d;best=f}}I.tgt=best}
     if(I.tgt){I.x+=(I.tgt.x-I.x)*.06*SPEED;I.y+=(I.tgt.y-I.y)*.06*SPEED;if(Math.hypot(I.tgt.x-I.x,I.tgt.y-I.y)<5){I.tgt.chk=true;ECO.done++;ECO.floats.push({x:I.x,y:I.y,life:1,txt:"+$"+ECO.per.toLocaleString()})}}
     const k=ECO.done*scale,hh=k*H_PER;
-    setM(Math.round(hh).toLocaleString()+" h","假設每件 0.5 小時：全部 "+N.toLocaleString()+" 件需 "+Math.round(N*H_PER).toLocaleString()+" h ≈ "+(N*H_PER/H_YEAR).toFixed(1)+" 年",
-      money(k*ECO.per),"全部需 "+money(N*ECO.per)+"（單件 $"+ECO.per.toLocaleString()+"）","結論重現率","< 30%","不同專家判定常互相衝突","耗時（假設每件 0.5 h）")}
+    setM(Math.round(N*H_PER).toLocaleString()+" h",N.toLocaleString()+" 件 × 0.5 小時（假設）≈ "+(N*H_PER/H_YEAR).toFixed(1)+" 年；動畫中專家已驗 "+k.toLocaleString()+" 件",
+      money(N*ECO.per),N.toLocaleString()+" 件 × $"+ECO.per.toLocaleString()+"；動畫中已花 "+money(k*ECO.per),"結論重現率","< 30%","不同專家判定常互相衝突","耗時（假設每件 0.5 h）")}
   else if(st===1){const p=Math.min(1,t/5200);ringR=p*Math.hypot(W,H)*.75;
     for(const f of ECO.fish)if(!f.scan&&Math.hypot(f.x-cx,f.y-cy)<ringR)f.scan=true;
     const ac=N*AI_PER;

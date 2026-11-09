@@ -520,7 +520,7 @@ cv.addEventListener('pointerleave',()=>{hover=null;tip.hidden=true});
 /* ======== 撒網 vs 燈塔 ======== */
 const NET={step:0,tt:0,fish:[],bagX:0,bagY:0};
 const NET_STEPS=[
- ["①","大網：關鍵字＋IPC","~5,000+","一網撈下去數量很多，但網裡的魚長得都一樣：真 SEP 和「長得像」的雜訊混在一起，無法判斷真偽。"],
+ ["①","大網：IPC＋時間段","~5,000+","以 IPC（H04N19）加申請時間段、或關鍵字加 IPC 撈，一網下去五千多筆——H04N19 涵蓋所有視訊編碼，連 1996 年的專利都在裡面。撈的時候每條魚看起來都一樣；上岸後抽 100 篇人工判讀，0 篇是 SEP。金魚是示意的極少數真 SEP。若整網委外驗證：5,000 筆 × US$10,000＝US$5,000 萬，幾乎都花在不是 SEP 的專利上。"],
  ["②","細網：PQAI 語意對標","~1,300","網眼換成語意，純度變高，只留下技術語言區的真 SEP。但 1,744 條真 SEP 躲在法律語言（上位化用語）的深水區，網子撞上結構性天花板下不去。"],
  ["③","土星燈塔：錨點輻射","3,044","以 1,300 條核心為燈塔，沿引用網絡（B 光束）與 JCT-VC 提案人（A 光束）照進深水。被照到的真 SEP 浮上來入軌，雜訊魚照到也不發光。金魚是被 2 個以上 Unit 同時找到的家族（全名單共 1,112 件）。"],
  ["④","聚光燈：先驗 152 件核心","152","燈塔收斂成聚光燈：被引 51 次以上的 152 件先交人工驗證，以專利池每件 10,000 美元計約 152 萬美元，只占 HEVC 原始池全驗（4.31 億美元）的 0.35%。示範魚 US 2014/0286413 A1（Disabling sign data hiding）被引 88 次、核心等級，但法律狀態是 Abandoned（已放棄）——這正是人工複核要把關的地方。"]];
@@ -537,15 +537,16 @@ function netBuild(){
   for(let i=0;i<1956;i++){const deep=rnd()<.3;NET.fish.push({kind:"noise",hx:xs(),hy:deep?z.dTop+rnd()*(z.dBot-z.dTop):z.sTop+rnd()*(z.sBot-z.sTop)})}
   NET.fish.forEach(f=>{f.x=f.hx;f.y=f.hy;f.vx=0;f.vy=0;f.ph=rnd()*6.28;f.jit=rnd();f.th=rnd()*6.28});
   const real=NET.fish.filter(f=>f.kind!=="noise").sort(()=>rnd()-.5);
-  real.forEach((f,i)=>{f.multi=i<1112;f.hot=false});[...real].sort(()=>rnd()-.5).slice(0,152).forEach((f,i)=>{f.hot=true;f.hi=i});NET.ex=real.find(f=>f.hot&&f.kind==="deep")}
-function netStart(i){NET.step=i;NET.tt=0;if(!NET.fish.length||NET.lastW!==W||NET.lastH!==H){netBuild();NET.lastW=W;NET.lastH=H}
+  real.forEach((f,i)=>{f.multi=i<1112;f.hot=false});
+  /* 撒網情境：IPC＋時間段撈到的魚中真 SEP 極少（示意） */NET.fish.forEach(f=>{f.sep0=rnd()<.012});[...real].sort(()=>rnd()-.5).slice(0,152).forEach((f,i)=>{f.hot=true;f.hi=i});NET.ex=real.find(f=>f.hot&&f.kind==="deep")}
+function netStart(i){NET.step=i;NET.tt=0;NET.checked=0;if(!NET.fish.length||NET.lastW!==W||NET.lastH!==H){netBuild();NET.lastW=W;NET.lastH=H}
   NET.fish.forEach(f=>{f.caught=false;f.lit=null;f.bx=(rnd()-.5);f.by=rnd()});
   if(i>=2)NET.fish.forEach(f=>{if(f.kind==="core")f.caught=true});
   if(i===3)NET.fish.forEach(f=>{if(f.kind==="deep")f.lit=f.multi?"AB":f.role});
   [...netBox.children].forEach((b,j)=>b.setAttribute('aria-pressed',j===i));
   document.getElementById('netNote').textContent=NET_STEPS[i][3];
   document.getElementById('nl1').textContent=i===3?"優先人工驗證":i===2?"入軌真 SEP":"網中魚數";
-  document.getElementById('nl2').textContent=i===0?"可辨識的真 SEP":i===1?"深水未撈到的真 SEP":i===2?"被 2+ 個 Unit 找到（金）":"驗證費用（每件 1 萬美元）"}
+  document.getElementById('nl2').textContent=i===0?"抽驗 100 篇中的 SEP":i===1?"深水未撈到的真 SEP":i===2?"被 2+ 個 Unit 找到（金）":"驗證費用（每件 1 萬美元）"}
 const LH=()=>({x:W<860?W*.5:280+(W-610)*.5,y:H*.33,R:Math.min(W,H)*.07});
 function netFrame(now){
   const t=NET.tt,z=zone(),st=NET.step,L=LH();
@@ -571,7 +572,7 @@ function netFrame(now){
       if(st===0||f.kind==="core")f.caught=true}
     if(st===2&&f.kind==="deep"&&!f.lit){for(const b of beams){const dx=f.x-L.x,dy=f.y-L.y;const a=Math.atan2(dy,dx);let d=Math.abs(a-b.a);d=Math.min(d,6.283-d);
       if(d<.11&&Math.hypot(dx,dy)<Math.max(W,H)){if(f.role===b.key||f.multi){f.lit=f.multi?"AB":f.role}}}}
-    if(f.caught&&st<2){const r=Math.min(W,H)*(st===0?.17:.1)*(1-haul*.5);tx=NET.bagX+f.bx*r*1.6;ty=NET.bagY+(f.by-.5)*r*2}
+    if(f.caught&&st<2){const r=Math.min(W,H)*(st===0?.2*(1-haul*.15):.1*(1-haul*.5));tx=NET.bagX+f.bx*r*1.6;ty=NET.bagY+(f.by-.5)*r*2}
     else if(st===3&&f.hot){const a=f.th+t*.0005,rr=L.R*(1.15+.55*f.jit);tx=L.x+Math.cos(a)*rr;ty=L.y+Math.sin(a)*rr*.62;if(f===NET.ex){tx=L.x+L.R*2.6;ty=L.y+L.R*.9}}
     else if(st>=2&&f.kind==="core"){const a=f.th+t*.0004,rr=L.R*(.35+.65*f.jit);tx=L.x+Math.cos(a)*rr;ty=L.y+Math.sin(a*1.3)*rr*.9}
     else if(st>=2&&f.lit){const ring=f.role==="B"?1.9:f.role==="A"?2.9:2.4;const a=f.th+t*.00025*(3.2-ring);const r=L.R*(ring+(f.jit-.5)*.4);tx=L.x+Math.cos(a)*r;ty=L.y+Math.sin(a)*r*.28}
@@ -582,14 +583,14 @@ function netFrame(now){
     if(st===2&&(f.kind==="core"||f.lit)){orbit++;if(f.lit==="AB")ab++}}
   if(st===3){orbit=152}
   // draw fish
-  const grp={dim:[],grey:[],blue:[],B:[],A:[],AB:[]};
+  const grp={dim:[],grey:[],blue:[],B:[],A:[],AB:[],gold0:[]};
   for(const f of NET.fish){
-    if(st===0)(f.caught?grp.grey:grp.dim).push(f);
+    if(st===0)(f.caught?(haul>.6&&f.sep0?grp.gold0:grp.grey):grp.dim).push(f);
     else if(st===1)(f.caught?grp.blue:grp.dim).push(f);
     else if(st===3)(f.hot?grp.AB:grp.dim).push(f);
     else (f.kind==="core"?grp.blue:f.lit==="AB"?grp.AB:f.lit==="A"?grp.A:f.lit==="B"?grp.B:grp.dim).push(f)}
   const paint=(arr,col,a,s)=>{if(!arr.length)return;ctx.globalAlpha=a;ctx.fillStyle=col;ctx.beginPath();arr.forEach(f=>fishPath(f,s));ctx.fill();ctx.globalAlpha=1};
-  paint(grp.dim,"#5f7584",st===3?.35:st===2?.55:.8,2.6);paint(grp.grey,"#8796a0",1,2.6);
+  paint(grp.dim,"#5f7584",st===3?.35:st===2?.55:.8,2.6);paint(grp.grey,"#7d8b95",st===0&&haul>.6?.45:.8,2.4);
   fadeTrail();ctx=trx;ctx.globalCompositeOperation="lighter";
   const AC=Object.values(ARM_COL);const byc=new Map();grp.blue.forEach(f=>{const c=AC[Math.floor(f.jit*6)];(byc.get(c)||byc.set(c,[]).get(c)).push(f)});
   for(const[c,arr]of byc)paint(arr,c,.55,2.6);
@@ -602,8 +603,21 @@ function netFrame(now){
     for(let y=0;y<=nh;y+=mesh){ctx.moveTo(nx,ny+y);ctx.lineTo(nx+nw,ny+y)}ctx.stroke();
     ctx.strokeStyle="rgba(220,230,236,.7)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(nx+nw,ny);ctx.lineTo(nx+nw,ny+nh);ctx.stroke();
     ctx.beginPath();ctx.moveTo(nx+nw,ny);ctx.lineTo(nx+nw+40,0);ctx.stroke();
-    if(st===0&&haul>.6){label(NET.bagX,NET.bagY-110,"真假難辨","網中 "+caught.toLocaleString()+" 條，顏色全都一樣","#8796a0")}
+    if(st===0&&haul>.6){const gold=NET.fish.filter(f=>f.caught&&f.sep0).length;label(NET.bagX,NET.bagY-Math.min(W,H)*.17-40,"撈到 "+caught.toLocaleString()+" 筆","真 SEP（金，示意）只有 "+gold+" 條，其餘都不是",COL.gold)}
     if(st===1&&p>=1){label(NET.bagX,NET.bagY-80,"高純度，但只有 "+caught.toLocaleString(),"深水仍有 "+deepLeft.toLocaleString()+" 條真 SEP",COL.q)}}
+  if(st===0&&grp.gold0.length){ctx.save();ctx.shadowColor="#ffd166";ctx.shadowBlur=10;paint(grp.gold0,"#ffd166",1,3.6);ctx.restore()}
+  // 上岸抽驗：100 篇人工判讀，0 篇是 SEP
+  if(st===0&&t>dur+1800){const k=Math.min(1,(t-dur-1800)/6500),n=Math.floor(k*100),cs=W<860?14:22,gx=W<860?16:Math.min(W-cs*10-60,NET.bagX+Math.min(W,H)*.2*.85*1.6+60),gy=H*.24;
+    NET.checked=n;ctx.fillStyle="rgba(9,30,62,.86)";ctx.fillRect(gx-12,gy-46,cs*10+24,cs*10+104);
+    ctx.font="700 13px 'Noto Sans TC',sans-serif";ctx.textAlign="left";ctx.fillStyle="#e6eff3";ctx.fillText("抽 100 篇人工判讀",gx,gy-26);
+    ctx.font="400 11px 'IBM Plex Mono',monospace";ctx.fillStyle="#8ea6b2";ctx.fillText("已驗 "+n+" / 100",gx,gy-10);
+    for(let i=0;i<100;i++){const cx=gx+(i%10)*cs+cs/2,cy=gy+Math.floor(i/10)*cs+cs/2;
+      ctx.fillStyle=i<n?"rgba(255,95,95,.18)":"rgba(255,255,255,.05)";ctx.fillRect(cx-cs/2+1,cy-cs/2+1,cs-2,cs-2);
+      ctx.fillStyle=i<n?"#7d8b95":"#56636c";ctx.beginPath();fishPath({x:cx,y:cy,vx:1,vy:0,ph:i},cs*.17);ctx.fill();
+      if(i<n){ctx.strokeStyle="#ff6b6b";ctx.lineWidth=1.6;const r=cs*.28;ctx.beginPath();ctx.moveTo(cx-r,cy-r);ctx.lineTo(cx+r,cy+r);ctx.moveTo(cx+r,cy-r);ctx.lineTo(cx-r,cy+r);ctx.stroke()}}
+    const by=gy+cs*10+22;ctx.font="700 "+(W<860?16:22)+"px 'IBM Plex Mono',monospace";ctx.fillStyle=n>=100?"#ff6b6b":"#e6eff3";ctx.fillText("SEP："+"0 / "+n,gx,by);
+    ctx.font="400 11px 'Noto Sans TC',sans-serif";ctx.fillStyle="#9fb4bf";ctx.fillText(n>=100?"100 篇裡沒有一篇是 SEP":"判讀中…",gx,by+18);
+    if(n>=100){ctx.fillStyle="#ffd166";ctx.fillText("整網委外驗證 ≈ 5,000 × US$10,000＝US$5,000 萬",gx,by+34)}}
   // lighthouse + darkness
   if(st>=2){
     const dk=document.createElement('canvas');dk.width=W;dk.height=H;const d=dk.getContext('2d');
@@ -629,7 +643,7 @@ function netFrame(now){
     ctx.font="500 11px 'Noto Sans TC',sans-serif";ctx.textAlign="center";ctx.fillStyle="#9fd8ff";
     const bl=(b,txt)=>{const r=H*.5;ctx.fillStyle=`rgb(${b.col})`;ctx.fillText(txt,L.x+Math.cos(b.a)*r,L.y+Math.sin(b.a)*r)};bl(beams[0],"B 光束 · 引用網絡");bl(beams[1],"A 光束 · JCT-VC 提案人")}}
   NET.tick=(NET.tick||0)+1;
-  if(NET.tick%6===0){document.getElementById('nc1').textContent=(st>=2?orbit:caught).toLocaleString();document.getElementById('nc2').textContent=st===3?"$1.52M":(st===0?0:st===1?deepLeft:ab).toLocaleString()}
+  if(NET.tick%6===0){document.getElementById('nc1').textContent=(st>=2?orbit:caught).toLocaleString();document.getElementById('nc2').textContent=st===3?"$1.52M":st===0?"0 / "+(NET.checked||0):(st===1?deepLeft:ab).toLocaleString()}
 }
 netStart(0);
 /* ======== 四大洋全景：專利池生命週期 ======== */

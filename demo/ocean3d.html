@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>高通 HEVC 魚群 (3D 版)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --abyss:#040a14;
+  --abyss-2:#081426;
+  --panel:rgba(4,10,20,.68);
+  --panel-solid:rgba(5,12,24,.94);
+  --line:rgba(120,220,255,.16);
+  --line-hi:rgba(120,230,255,.45);
+  --ink:#e4f1f7;
+  --dim:#7f97a6;
+  --faint:#4d6272;
+  --qcom:#22e3ff;
+  --sams:#4f7bff;
+  --other:#6a5cff;
+  --gold:#ffd166;
+  --sonar:#5ff3ff;
+  --glow:0 0 0 1px rgba(95,243,255,.28),0 0 18px rgba(34,227,255,.22);
+  --f-display:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0;background:var(--abyss);color:var(--ink);font-family:var(--f-body);overflow:hidden;-webkit-font-smoothing:antialiased}
+#webgl-container{position:fixed;inset:0;width:100%;height:100%;z-index:1}
+
+/* HUD 介面結構 */
+.hud{position:fixed;z-index:10;background:linear-gradient(180deg,rgba(10,22,40,.72),rgba(3,8,16,.78));border:1px solid var(--line);border-radius:12px;
+  backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
+  box-shadow:inset 0 1px 0 rgba(150,235,255,.08),0 12px 40px rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.4)}
+.hud::before{content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(var(--sonar),var(--sonar)) left top/10px 1px no-repeat,linear-gradient(var(--sonar),var(--sonar)) left top/1px 10px no-repeat,
+  linear-gradient(var(--sonar),var(--sonar)) right bottom/10px 1px no-repeat,linear-gradient(var(--sonar),var(--sonar)) right bottom/1px 10px no-repeat;opacity:.55}
+#top{top:calc(10px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:9px 14px}
+.brand{min-width:0}
+.brand h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:1.08rem;letter-spacing:.14em;text-shadow:0 0 18px rgba(34,227,255,.35)}
+.brand h1::before{content:"◉ ";color:var(--sonar);font-size:.7em;vertical-align:.12em;animation:ping 2.4s ease-in-out infinite}
+@keyframes ping{50%{opacity:.25}}
+.brand p{margin:2px 0 0;font:400 .6rem var(--f-mono);letter-spacing:.08em;color:var(--dim)}
+
+/* 膠囊按鈕 */
+.tabs{display:flex;gap:2px;background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:999px;padding:3px}
+.tabs button{border:1px solid transparent;background:transparent;border-radius:999px}
+.tabs button[aria-pressed="true"]{background:linear-gradient(180deg,rgba(34,227,255,.22),rgba(34,227,255,.08));color:#dffcff;border-color:rgba(95,243,255,.45);box-shadow:var(--glow);text-shadow:0 0 8px rgba(95,243,255,.6)}
+button{font:500 .76rem var(--f-body);letter-spacing:.04em;color:var(--ink);background:rgba(95,243,255,.05);border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer;white-space:nowrap;transition:color .2s,border-color .2s,box-shadow .2s,background .2s}
+button:hover{color:var(--sonar);border-color:var(--line-hi);box-shadow:0 0 12px rgba(34,227,255,.18)}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:1px solid var(--sonar);outline-offset:2px}
+
+/* 年份時鐘 + 自訂滑桿 */
+.clock{display:flex;align-items:center;gap:12px;flex:1 1 300px;min-width:0}
+.yr{font-family:var(--f-mono);font-size:1.7rem;font-weight:500;color:var(--sonar);font-variant-numeric:tabular-nums;line-height:1;min-width:4.6ch;text-shadow:0 0 14px rgba(34,227,255,.55)}
+.yr small{display:block;font:500 .5rem var(--f-mono);color:var(--dim);letter-spacing:.22em;margin-top:5px;text-shadow:none;text-transform:uppercase;white-space:nowrap}
+.yr.ghost{color:var(--gold);text-shadow:0 0 14px rgba(255,209,102,.5)}
+.clock input[type=range]{flex:1;min-width:0;-webkit-appearance:none;appearance:none;height:22px;background:transparent;cursor:pointer;
+  --tick:repeating-linear-gradient(90deg,rgba(120,220,255,.35) 0 1px,transparent 1px 6.06%)}
+.clock input[type=range]::-webkit-slider-runnable-track{height:22px;background:linear-gradient(rgba(120,220,255,.25),rgba(120,220,255,.25)) center/100% 1px no-repeat,var(--tick) center 15px/100% 5px no-repeat}
+.clock input[type=range]::-moz-range-track{height:22px;background:linear-gradient(rgba(120,220,255,.25),rgba(120,220,255,.25)) center/100% 1px no-repeat,var(--tick) center 15px/100% 5px no-repeat}
+.clock input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:4px;height:20px;border-radius:2px;background:var(--sonar);box-shadow:0 0 0 3px rgba(34,227,255,.15),0 0 12px var(--sonar)}
+.clock input[type=range]::-moz-range-thumb{width:4px;height:20px;border:0;border-radius:2px;background:var(--sonar);box-shadow:0 0 0 3px rgba(34,227,255,.15),0 0 12px var(--sonar)}
+
+#ledger{left:max(16px,env(safe-area-inset-left,0px));top:86px;width:260px;max-height:calc(100% - 170px);overflow-y:auto;padding:12px 14px}
+#desk{right:max(16px,env(safe-area-inset-right,0px));top:86px;width:310px;max-height:calc(100% - 170px);overflow-y:auto;padding:12px 14px}
+.hud::-webkit-scrollbar{width:4px}.hud::-webkit-scrollbar-thumb{background:rgba(120,220,255,.2);border-radius:2px}
+h2{margin:0 0 9px;font:500 .56rem var(--f-mono);letter-spacing:.26em;color:var(--sonar);text-transform:uppercase;opacity:.85}
+h2::before{content:"// ";color:var(--faint)}
+h3{margin:14px 0 6px;font:500 .58rem var(--f-mono);letter-spacing:.22em;color:var(--dim);text-transform:uppercase;border-top:1px solid var(--line);padding-top:10px}
+
+.big{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.big div{background:linear-gradient(180deg,rgba(34,227,255,.06),rgba(34,227,255,.01));border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.big b{display:block;font:500 1.45rem/1.1 var(--f-mono);color:var(--qcom);font-variant-numeric:tabular-nums;text-shadow:0 0 12px rgba(34,227,255,.4)}
+.big span{font:500 .52rem/1.5 var(--f-mono);letter-spacing:.14em;color:var(--dim);display:block;margin-top:4px;text-transform:uppercase}
+.key{display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;font-size:.74rem;padding:3px 0;border-bottom:1px solid rgba(120,220,255,.045)}
+.key i{width:12px;height:3px;border-radius:2px;display:block;box-shadow:0 0 6px currentColor}
+.key span{color:#c9dde6}
+.key em{font-style:normal;font:500 .78rem var(--f-mono);color:var(--ink);font-variant-numeric:tabular-nums}
+.note{font-size:.68rem;color:var(--dim);line-height:1.65;margin:9px 0 0}
+.phases{display:grid;gap:4px}
+.ph{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;text-align:left;padding:7px 10px;border-radius:8px}
+.ph[aria-pressed="true"]{border-color:rgba(95,243,255,.5);background:linear-gradient(90deg,rgba(34,227,255,.16),rgba(34,227,255,.03));box-shadow:inset 2px 0 0 var(--sonar)}
+.ph .n{font-family:var(--f-mono);color:var(--faint);font-size:.66rem}
+.ph[aria-pressed="true"] .n{color:var(--sonar)}
+.ph .c{font:500 .78rem var(--f-mono);color:var(--sonar);font-variant-numeric:tabular-nums}
+.ph .t{font-size:.74rem;line-height:1.35;white-space:normal}
+textarea{width:100%;min-height:90px;resize:vertical;box-sizing:border-box;background:rgba(0,0,0,.4);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:9px;font:400 .76rem/1.6 var(--f-body)}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.match{display:grid;grid-template-columns:1fr auto;gap:4px 8px;font-size:.76rem;margin-top:8px}
+.bar{grid-column:1/-1;height:2px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden}
+.bar span{display:block;height:100%;background:var(--sonar);box-shadow:0 0 8px var(--sonar)}
+#prov{left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:5px 14px;font:400 .6rem var(--f-mono);letter-spacing:.06em;color:var(--dim);max-width:calc(100% - 32px);text-align:center;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tip{position:fixed;z-index:100;pointer-events:none;background:var(--panel-solid);border:1px solid var(--line-hi);border-radius:8px;padding:8px 12px;font-size:.72rem;line-height:1.55;max-width:280px;box-shadow:0 0 24px rgba(34,227,255,.15),0 10px 30px rgba(0,0,0,.6);backdrop-filter:blur(10px)}
+#tip b{font-family:var(--f-mono);color:var(--sonar);font-weight:500}
+.fold{all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;box-sizing:border-box;font:500 .6rem var(--f-mono);letter-spacing:.2em;color:var(--ink)}
+.fold:focus-visible{outline:1px solid var(--sonar);outline-offset:3px;border-radius:4px}
+.fold::after{content:"▾";color:var(--sonar);transition:transform .2s}
+.hud.folded .fold::after{transform:rotate(-90deg)}
+.hud.folded .foldBody{display:none}
+.hud.folded{width:auto!important;max-height:none!important;padding:8px 13px!important}
+.foldBody{margin-top:10px}
+
+/* 經濟效益模組 */
+#eco{left:50%;transform:translateX(-50%);bottom:calc(46px + env(safe-area-inset-bottom,0px));width:min(940px,calc(100% - 32px));padding:13px 16px;box-sizing:border-box}
+.ecoHead{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-start;justify-content:space-between}
+.ecoSteps{grid-template-columns:repeat(4,minmax(0,1fr));flex:1 1 520px;min-width:0}
+.ecoSteps .ph{grid-template-columns:auto 1fr}
+.ecoBase{display:flex;flex-direction:column;gap:6px;font:500 .56rem var(--f-mono);letter-spacing:.18em;color:var(--dim)}
+.perc{display:flex;align-items:center;gap:4px;font:500 .7rem var(--f-mono);color:var(--dim)}
+.perc input{width:6.5em;background:rgba(0,0,0,.4);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font:500 .8rem var(--f-mono)}
+.ecoGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:11px}
+.ecoGrid .m{background:linear-gradient(180deg,rgba(34,227,255,.06),rgba(34,227,255,.01));border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.ecoGrid span{font:500 .54rem var(--f-mono);letter-spacing:.22em;color:var(--dim);text-transform:uppercase}
+.ecoGrid b{display:block;font:500 1.75rem/1.15 var(--f-mono);color:var(--sonar);font-variant-numeric:tabular-nums;margin-top:4px;overflow-wrap:anywhere;text-shadow:0 0 14px rgba(34,227,255,.4)}
+.ecoGrid small{display:block;font-size:.68rem;color:var(--dim);line-height:1.5;margin-top:3px}
+#eBars{margin-top:10px;display:none;gap:8px}
+.ecoGrid .recall{background:linear-gradient(180deg,rgba(150,215,255,.22),rgba(150,215,255,.1));border:1px solid rgba(150,215,255,.55)}
+.ecoGrid .recall span,.ecoGrid .recall small{color:#bfe3f7}
+.ecoGrid .recall b{color:#e8f7ff;text-shadow:0 0 14px rgba(150,215,255,.6)}
+.ecoGrid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.poolcost{margin-top:10px;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;padding:9px 12px;border-radius:10px;background:linear-gradient(90deg,rgba(255,107,107,.12),rgba(255,107,107,.03));border:1px solid rgba(255,120,120,.32);font-size:.72rem;color:var(--dim)}
+.poolcost b{font:500 1.2rem var(--f-mono);color:#ff9a9a;font-variant-numeric:tabular-nums;text-shadow:0 0 12px rgba(255,107,107,.4)}
+.brow{display:grid;grid-template-columns:7.5em 1fr;gap:8px;align-items:center;font-size:.72rem}
+.btrack{display:grid;gap:3px}
+.bline{display:flex;align-items:center;gap:8px;min-width:0}
+.bline i{display:block;height:6px;border-radius:3px;min-width:3px;transition:width 1.2s cubic-bezier(.2,.8,.2,1);box-shadow:0 0 8px currentColor}
+.bline em{font-style:normal;font-family:var(--f-mono);font-size:.7rem;color:var(--ink);white-space:nowrap}
+#saturnViews{margin-top:8px;display:flex;gap:4px}
+#saturnViews button{padding:4px 10px;font-size:.7rem}
+#cbLeg .geoT{width:100%;border-collapse:collapse;font-size:.68rem;font-variant-numeric:tabular-nums;font-family:var(--f-mono)}
+#cbLeg .geoT th{color:var(--dim);font:500 .56rem var(--f-mono);letter-spacing:.14em;text-align:right;padding:3px;border-bottom:1px solid var(--line)}
+#cbLeg .geoT td{text-align:right;padding:3px;color:#cfe6ee;border-bottom:1px solid rgba(120,220,255,.05)}
+#cbLeg .geoT td:first-child{text-align:left}
+#cbLeg .geoT i{display:inline-block;width:8px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle;box-shadow:0 0 6px currentColor}
+</style>
+<!-- three.js CDN 版本鎖定在 0.160.0 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+<div id="webgl-container"></div>
+
+<header class="hud" id="top">
+  <div class="brand"><h1>高通 HEVC 魚群 3D</h1><p>高通一條魚＝一個專利家族 · 池內一條魚＝一件專利 · 顏色＝權利人</p></div>
+  <div class="tabs" role="group" aria-label="檢視模式">
+    <button type="button" id="mOcean" aria-pressed="true">四大洋全景</button>
+    <button type="button" id="mVortex" aria-pressed="false">池子漩渦</button>
+    <button type="button" id="mSaturn" aria-pressed="false">土星錨點</button>
+    <button type="button" id="mNet" aria-pressed="false">撒網 vs 燈塔</button>
+    <button type="button" id="mEco" aria-pressed="false">經濟效益</button>
+  </div>
+  <div class="clock">
+    <div class="yr" id="yrBox"><span id="yrTxt">2026</span><small id="yrLbl">今天</small></div>
+    <button type="button" id="play">▶ 播放 2000→2033</button>
+    <input type="range" id="yr" min="2000" max="2033" step="1" value="2026" aria-label="年份">
+  </div>
+  <div class="tabs" role="group" aria-label="速度" id="speeds">
+    <button type="button" data-s="1" aria-pressed="false">1×</button>
+    <button type="button" data-s="2" aria-pressed="true">2×</button>
+    <button type="button" data-s="3" aria-pressed="false">3×</button>
+  </div>
+</header>
+
+<aside class="hud" id="ledger">
+  <h2>簡報數字（給組長的高通名單）</h2>
+  <div class="big">
+    <div><b>3,044</b><span>高通獨立專利家族（不含子案）</span></div>
+    <div><b>4,407</b><span>原始候選，去重後 3,044（重複率 30.9%）</span></div>
+    <div><b>152</b><span>被引 51 次以上的核心群</span></div>
+    <div><b>13.6</b><span>平均被引次數；最高單件 727（仿射 MP）</span></div>
+  </div>
+  <h3>HEVC Advance 專利池清洗</h3>
+  <div class="key"><i style="background:var(--other)"></i><span>原始專利號（2026/03/26）</span><em>43,095</em></div>
+  <div class="key"><i style="background:var(--other)"></i><span>去重＋專利組織歸併（65 國）</span><em>20,267</em></div>
+  <div class="key"><i style="background:var(--other)"></i><span>前 20 大國家（85.4%）</span><em>17,316</em></div>
+  <div class="key"><i style="background:var(--other)"></i><span>排除 EPO 會員國、修正案號</span><em>13,525</em></div>
+  <div class="key"><i style="background:var(--other)"></i><span>DI 申請編號（分析母數）</span><em>13,506</em></div>
+  <h3>漩渦中的權利人</h3>
+  <div class="key"><i style="background:var(--qcom)"></i><span>Qualcomm（池外，專利家族）</span><em>3,044</em></div>
+  <div class="key"><i style="background:var(--sams)"></i><span>Samsung（池內第一，17.6%）</span><em>2,381</em></div>
+  <div class="key"><i style="background:var(--other)"></i><span>其他池內權利人（13,506 − 2,381）</span><em>11,125</em></div>
+  <h3>VVC Advance 專利池</h3>
+  <div class="key"><i style="background:#c8b6ff"></i><span>DI 申請編號（7,378 → 3,076）</span><em>3,076</em></div>
+  <div class="key"><i style="background:#ff9f43"></i><span>太陽專利信託（14.4%）</span><em>443</em></div>
+  <div class="key"><i style="background:#48dbfb"></i><span>JVC 建伍（10.9%）</span><em>335</em></div>
+  <div class="key"><i style="background:#ff6bcb"></i><span>字節跳動（9%）</span><em>278</em></div>
+  <h3>高通技術章節（漩渦旋臂）</h3>
+  <div id="armKeys"></div>
+  <p class="note">優先權年 2011–2014 為核心布局期（1,804 筆，59%），2012 年單年 494 筆為峰值。各 Unit 為「首次貢獻的唯一專利數」，合計 3,044；2B、7A、2B_v1、2A 依儀表板圖二讀圖估計（合計 430）。被 2 個以上 Unit 同時涵蓋 1,112 筆。</p>
+  <h3>公告國家 TOP 10（美中台合計 36.5%）</h3>
+  <div id="geoKeys"></div>
+</aside>
+
+<aside class="hud" id="desk">
+  <div id="colorBy">
+    <h2>魚的顏色</h2>
+    <div class="tabs" role="group" aria-label="上色方式">
+      <button type="button" data-c="arm" aria-pressed="true">Unit 章節</button>
+      <button type="button" data-c="geo" aria-pressed="false">公告國家</button>
+      <button type="button" data-c="cite" aria-pressed="false">被引用</button>
+    </div>
+    <div id="cbLeg" style="margin-top:8px"></div>
+  </div>
+  <div id="deskVortex">
+    <h2>放入本案比對</h2>
+    <textarea id="claims" aria-label="貼上請求項">一種視訊解碼方法，包含：從位元串流解析一切片的編碼樹單元，以四叉樹將編碼單元分割為多個預測單元；建立合併候選列表，並依空間及時間相鄰區塊導出運動向量預測候選…</textarea>
+    <div class="row">
+      <button type="button" id="drop">放入本案魚</button>
+      <button type="button" id="clearCase">移除</button>
+    </div>
+    <div id="matchOut"><p class="note">貼上請求項後按「放入本案魚」，白色的本案魚會依關鍵字對標 HEVC 章節，游進最接近的高通旋臂。</p></div>
+    <h3>推演（純數學外推）</h3>
+    <p class="note" id="fcNote"></p>
+  </div>
+  <div id="deskNet" hidden>
+    <h2>撈魚比較 · 以往檢索 vs 土星燈塔</h2>
+    <div class="phases" id="netSteps"></div>
+    <div class="big" style="margin-top:10px">
+      <div><b id="nc1">0</b><span id="nl1">網中魚數</span></div>
+      <div><b id="nc2">0</b><span id="nl2">可辨識的真 SEP</span></div>
+    </div>
+    <p class="note" id="netNote"></p>
+    <div class="row"><button type="button" id="netReplay">重新撈一次</button></div>
+  </div>
+  <div id="deskSaturn" hidden>
+    <h2>土星錨點輻射法 · 階段</h2>
+    <div class="phases" id="phases"></div>
+    <div id="saturnViews">
+      <button type="button" data-v="far">遠觀視角</button>
+      <button type="button" data-v="orbit">環繞視角</button>
+      <button type="button" data-v="core">核心視角</button>
+    </div>
+    <div class="key" style="margin-top:10px"><i style="background:var(--qcom)"></i><span>核心球體 PQAI 語意對標</span><em>1,300</em></div>
+    <div class="key"><i style="background:#9fd8ff"></i><span>衛星環 B 引用網絡＋外環 A 提案人</span><em>1,744</em></div>
+    <div class="key"><i style="background:var(--gold)"></i><span>被 2 個以上 Unit 同時涵蓋（Phase 4 金色）</span><em>1,112</em></div>
+    <div class="key"><i style="background:#ff5f87"></i><span>跨 Unit 重複，去重刪除</span><em>1,363</em></div>
+    <div class="key"><i style="background:#56636c"></i><span>關鍵字 / IPC 雜訊</span><em>1,956</em></div>
+    <p class="note" id="phaseNote"></p>
+  </div>
+</aside>
+
+<section class="hud" id="eco" hidden aria-live="polite">
+  <div class="ecoHead">
+    <div class="phases ecoSteps" id="ecoSteps"></div>
+    <div class="ecoBase">
+      <span>驗證母數</span>
+      <div class="tabs" role="group" aria-label="驗證母數" id="ecoBase"></div>
+      <label class="perc" for="ecoPer">人工單件 $<input id="ecoPer" type="number" min="100" step="500" value="10000" inputmode="numeric"></label>
+    </div>
+  </div>
+  <div class="ecoGrid">
+    <div class="m"><span id="eTl">耗時</span><b id="eT">—</b><small id="eTs"></small></div>
+    <div class="m"><span id="eCl">驗證費用（USD）</span><b id="eC">—</b><small id="eCs"></small></div>
+    <div class="m"><span id="eAl">準確率</span><b id="eA">—</b><small id="eAs"></small></div>
+    <div class="m recall" id="eR" style="display:none">
+      <span>召回率</span>
+      <b>≈ 83% ／ 56%</b>
+      <small>黃金集驗證高通名單：≈ 83%（由精確率 88%、F1 85.5% 換算）<br>同方法未調權重、三星公告名單重現率：56%（工具未漏檢 1,333 件）</small>
+    </div>
+  </div>
+  <div id="eBars" hidden></div>
+  <div class="poolcost" id="poolCost"></div>
+  <p class="note" id="eNote"></p>
+</section>
+
+<div class="hud" id="prov">池內申請年依期末報告到期結構回推（到期＝申請＋20 年，中間年份內插）；高通依合併去重儀表板；H.264 為示意；2027 年後為推演。</div>
+<div id="tip" hidden></div>
+
+<script>
+/* ==================== 1. 數據常數 (嚴格維持原始值與出處) ==================== */
+const YEARS=[2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020];
+const PER_YEAR=[92,17,107,455,494,438,417,308,228,200,168,120,0];
+const FIT_Y=[2015,2016,2017,2018,2019],FIT_V=[308,228,200,168,120];
+const ARMS=[
+  ["6B","§7.3.6-8 Slice/CU",1707],["PNS","PNS 種子清單",907],["2B","§8.5.3 AMVP",301],
+  ["7A","§8.1-8.3 POC+RPS",110],["2B_v1","AMVP 原版",13],["2A","§8.5.3 Merge",6]
+];
+const ARM_SHORT={"6B":"Slice/CU","PNS":"PNS 種子","2B":"AMVP","7A":"POC+RPS","2B_v1":"AMVP 原版","2A":"Merge"};
+const GEO=[["US",585,"#3fa9e6"],["WO",445,"#a07bff"],["CN",355,"#3fc29a"],["TW",170,"#ffb347"],["EP",62,"#ff5f87"],["BR",38,"#6f95ff"],["JP",35,"#ff8a4c"],["AU",27,"#9ccc4a"],["KR",22,"#ff6fc0"],["CA",17,"#4cc9d8"],["其他",1288,"#4d6578"]];
+const HEVC_GEO=[["US",23.2],["CN",14.3],["KR",12.5],["JP",10.2],["其他",39.8]];
+const VVC_GEO=[["US",1257],["CN",1170],["JP",560],["AU",120],["BR",113],["MX",101],["CA",96],["ES",78],["IN",61],["HK",41],["其他",145]];
+const GEO_COL=Object.assign(Object.fromEntries(GEO.map(g=>[g[0],g[2]])),{MX:"#d6e05a",ES:"#e07a5f",IN:"#81b29a",HK:"#f2cc8f"});
+const HEVC_FY={1996:30,1997:40,1998:60,1999:80,2000:110,2001:130,2002:140,2003:120,2004:50,2005:40,2006:70,2007:100,2008:600,2009:900,2010:1350,2011:2059,2012:4711,2013:1300,2014:700,2015:400,2016:250,2017:150,2018:80,2019:36};
+const VVC_FY={2004:6,2005:6,2006:8,2007:12,2008:40,2009:70,2010:130,2011:250,2012:420,2013:260,2014:150,2015:100,2016:86,2017:200,2018:380,2019:560,2020:300,2021:98};
+const AVC_FY={1994:4,1995:8,1996:12,1997:18,1998:24,1999:30,2000:34,2001:38,2002:40,2003:36,2004:26,2005:16,2006:10,2007:6,2008:4};
+const VVC_OWN=[["太陽專利信託",443,"#a99bff"],["JVC 建伍",335,"#7aa2ff"],["字節跳動",278,"#c6a8ff"],["其他 VVC 權利人",2020,"#7466e0"]];
+const MILES=[
+  [2000,"H.264 研發中"],[2003,"H.264／AVC 定案"],[2004,"VCEG 研究下一代"],[2010,"JCT-VC 成立"],
+  [2012,"HEVC 申請高峰"],[2013,"H.265 批准"],[2014,"MPEG LA HEVC 池"],[2015,"HEVC Advance・JVET 探索"],
+  [2017,"VVC 徵案・Velos 成立"],[2018,"JVET 標準化・技術外溢"],[2019,"VVC 申請高峰"],[2020,"H.266 定案"],
+  [2022,"Velos 解散・高通回雙邊"],[2026,"今天"],[2027,"推演"],[2028,"H.267 預計定案"],[2032,"HEVC 到期高峰 4,711"]
+];
+const STARS=[
+ ["hevc",1,"US 6728317 B1","杜比實驗室授權公司（DLLC）",880,2001,"2000–2003 年間","帶負波瓣的位移濾波器，提升次像素插值（運動補償）品質"],
+ ["hevc",2,"US 7266150 B2","杜比實驗室授權公司（DLLC）",513,2002,"2000–2003 年間","雙向預測幀的像素插值與不對等加權"],
+ ["hevc",3,"US 7003035 B2","微軟",374,2002,"2000–2003 年間","改進直接預測模式，不傳完整運動向量即可推導運動資訊"],
+ ["hevc",4,"US 6816552 B2","杜比實驗室授權公司（DLLC）",253,2001,"2000–2003 年間","B 幀依時間距離加權並混合的插值"],
+ ["hevc",5,"US 7379608 B2","弗勞恩霍夫協會",205,2003,"2000–2003 年間","CABAC 轉換係數的掃描模式切換"],
+ ["hevc",6,"US 6894628 B2","杜比視訊壓縮（DVC）",186,2003,"2000–2003 年間","CABAC 上下文變數初始化"],
+ ["hevc",7,"US 6507618 B1","杜比國際 AB",173,2000,"2000–2003 年間","獨立編碼區域的壓縮影片訊號架構"],
+ ["hevc",8,"US 7733960 B2","松下電器",161,2002,"2000–2003 年間","直接模式下多運動向量參考區塊的運動向量計算"],
+ ["hevc",9,"US 9049452 B2","寰發（HFI）",149,2011,"2011 年","HEVC 編碼單元四元樹分割的限制性壓縮，前十名中唯一距到期尚久"],
+ ["hevc",10,"US 6900748 B2","杜比視訊壓縮（DVC）",142,2003,"2000–2003 年間","二值化與二進位算術編碼混合方法"],
+ ["vvc",1,"US 10841609 B1","字節跳動",119,2020,"約 2020 年","仿射模式的自適應運動向量解析度（AMVR）"],
+ ["vvc",2,"US 10939128 B2","字節跳動",71,2020,"約 2020 年","跨分量線性模型（CCLM）參數推導簡化，對應 VVC §8.1.1"],
+ ["vvc",3,"US 10390050 B2","寰發（HFI）",70,2016,"","亮度與色度分離編碼樹（Separate Coding Tree）"],
+ ["vvc",4,"US 8792739 B2","太陽專利信託",67,2012,"2012 年","降低 CABAC 上下文記憶體，對應 VVC §7.4.12.5"],
+ ["vvc",5,"US 8743969 B2","太陽專利信託",65,2012,"2012 年","CABAC 上下文模型簡化（系列延伸）"],
+ ["vvc",6,"US 10284860 B1","騰訊",64,2018,"","非方形區塊的廣角畫面內預測"],
+ ["vvc",6,"US 8811762 B2","太陽專利信託",64,2012,"2012 年","運動向量差值的 CABAC 上下文簡化，對應 VVC §9.3.4.2.1"],
+ ["vvc",8,"US 10587859 B2","寰發（HFI）",61,2015,"","3D／多視角的 Sub-PU 視角間運動預測"],
+ ["vvc",9,"US 8913665 B2","太陽專利信託",57,2012,"2012 年","依長期／短期參考幀調整的時間運動向量預測（TMVP）"],
+ ["vvc",10,"US 11146785 B2","字節跳動",55,2020,"約 2020 年","更新運動資訊查找表（HMVP LUT）"],
+ ["q",0,"US 2014/0286413 A1","高通",88,2014,"2014 年","Disabling sign data hiding（無損／DPCM 時停用符號資料隱藏）；法律狀態 Abandoned"]
+];
+const ECO_CONST={
+  H_PER:0.5, H_YEAR:2102.4, AI_H:72, AI_PER:11035/17000, P:0.88, REC:0.56,
+  GOLD:2381, TP:Math.round(0.56*2381), FN:2381-Math.round(0.56*2381)
+};
+const BASES=[[3044,"高通 3,044"],[13506,"池內母數 13,506"],[43095,"原始池 43,095"]];
+const ARM_COL={"6B":"#22e3ff","PNS":"#7af0ff","2B":"#00b8d9","7A":"#6ff2d6","2B_v1":"#9ad9ff","2A":"#2ec4b6"};
+const S_COLS=["#4f7bff","#3d6bff","#6b8fff","#2f5bff"];
+const O_COLS=["#6a5cff","#5546e8","#7f73ff","#4a3fd0","#8b80ff"];
+const CITE_COL=c=>c>=51?"#ffd166":c>=31?"#ff8a4c":c>=11?"#3fa9e6":"#2b5d86";
+const ARM_KW={
+  "6B":["slice","coding unit","coding tree","ctu","quadtree","quad-tree","partition","split","切片","編碼單元","编码单元","編碼樹","编码树","四叉樹","四叉树","分割"],
+  "2B":["amvp","motion vector predictor","motion vector prediction","mvp","預測候選","运动向量预测","運動向量預測","候選列表","候选列表"],
+  "7A":["picture order count","poc","reference picture set","rps","reference picture","參考圖像","参考图像","參考圖片","圖像順序","图像顺序"],
+  "2A":["merge","merging","合併","合并"],
+  "1A":["quantization parameter","quantisation","qp","delta qp","量化參數","量化参数","量化"]
+};
+const KW_LABEL={"6B":"§7.3.6-8 Slice/CU","2B":"§8.5.3 AMVP","7A":"§8.1-8.3 POC+RPS","2A":"§8.5.3 Merge","1A":"§8.4.1-3 量化參數"};
+
+/* ==================== 2. 確定性隨機與資料池初始化 ==================== */
+let seed=20260105; const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
+const pickW=(arr,wf)=>{const t=arr.reduce((s,a)=>s+wf(a),0);let r=rnd()*t;for(const a of arr){r-=wf(a);if(r<=0)return a}return arr[arr.length-1]};
+
+const fit=(()=>{const n=5,xs=FIT_Y.map(y=>y-2015),ys=FIT_V.map(v=>Math.log(v));const mx=xs.reduce((a,b)=>a+b)/n,my=ys.reduce((a,b)=>a+b)/n;let sxy=0,sxx=0;xs.forEach((x,i)=>{sxy+=(x-mx)*(ys[i]-my);sxx+=(x-mx)**2});const b=sxy/sxx,a=my-b*mx;return {a,b,at:y=>Math.exp(a+b*(y-2015))}})();
+const FC={2021:Math.round(fit.at(2021)),2022:Math.round(fit.at(2022)),2023:Math.round(fit.at(2023))};
+document.getElementById('fcNote').innerHTML=
+ `以 2015–2019 年高通申請量做對數線性迴歸（2020 年因公開延遲不納入），年衰減率 ${Math.round((1-Math.exp(fit.b))*100)}%。外推 2021 / 2022 / 2023 年約 <b>${FC[2021]} / ${FC[2022]} / ${FC[2023]}</b> 個新家族，播放到 2021 後以金色虛線魚顯示。這是動量推演，不是預測事實。`;
+
+/* 產生魚群實體數據 */
+const FISH_DATA=[];
+const qFish=[];
+const yearPool=[]; YEARS.forEach((y,i)=>{for(let k=0;k<PER_YEAR[i];k++)yearPool.push(y)});
+for(let i=yearPool.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[yearPool[i],yearPool[j]]=[yearPool[j],yearPool[i]]}
+const CITE_PLAN=[]; for(let i=0;i<3044;i++){const r=Math.pow(rnd(),6);CITE_PLAN.push(i<1549?1+Math.floor(r*10):i<2481?11+Math.floor(r*20):i<2892?31+Math.floor(r*20):51+Math.floor(Math.pow(rnd(),12)*300))}
+
+for(let i=0;i<3044;i++){
+  const arm=pickW(ARMS,a=>a[2])[0], cites=CITE_PLAN[i];
+  const f={id:i,who:"q",arm,year:yearPool[i]||2012,cites,r0:Math.pow(rnd(),.75),jit:rnd(),fy:yearPool[i]+rnd(),migr:yearPool[i]>=2018};
+  qFish.push(f);FISH_DATA.push(f);
+}
+qFish.sort((a,b)=>b.cites-a.cites);qFish[0].cites=727;qFish[0].star="最高被引單件 727 次";qFish[0].arm="2B";
+{const order=[...qFish].sort(()=>rnd()-.5);order.forEach((f,i)=>{f.role=i<1300?"core":i%2?"A":"B"});const o2=[...qFish].sort(()=>rnd()-.5);o2.forEach((f,i)=>{f.multi=i<1112})}
+const gp=[];GEO.forEach(([k,n])=>{for(let i=0;i<n;i++)gp.push(k)});
+[...qFish].sort(()=>rnd()-.5).forEach((f,i)=>f.geo=gp[i]);
+
+// Samsung 與 其他池內權利人
+for(let i=0;i<2381;i++)FISH_DATA.push({id:FISH_DATA.length,who:"s",geo:pickW(HEVC_GEO,g=>g[1])[0],fy:2008+rnd()*8,cites:1+Math.floor(rnd()*30),jit:rnd(),r0:Math.pow(rnd(),.7)});
+for(let i=0;i<1390;i++)FISH_DATA.push({id:FISH_DATA.length,who:"o",geo:pickW(HEVC_GEO,g=>g[1])[0],fy:2004+rnd()*12,cites:1+Math.floor(rnd()*40),jit:rnd(),r0:Math.pow(rnd(),.65)});
+// VVC 池魚
+for(let i=0;i<770;i++){const own=pickW(VVC_OWN,o=>o[1]);FISH_DATA.push({id:FISH_DATA.length,who:"v",vk:own[0],vcol:own[2],geo:pickW(VVC_GEO,g=>g[1])[0],fy:2012+rnd()*9,early:rnd()<.3,cites:1+Math.floor(rnd()*50),jit:rnd(),r0:rnd()})}
+// 雜訊魚 (Saturn Phase 0 ~ 1)
+const NOISE_DATA=[];
+for(let i=0;i<1956;i++)NOISE_DATA.push({id:FISH_DATA.length+i,who:"n",role:"noise",r0:rnd(),jit:rnd(),cites:1+Math.floor(rnd()*10)});
+
+// 大魚 STARS 綁定
+const BIG_STARS=[];
+STARS.forEach((s,idx)=>{
+  BIG_STARS.push({
+    pool:s[0],rank:s[1],no:s[2],own:s[3],cites:s[4],fy:s[5],yr:s[6],sum:s[7],
+    who:s[0]==="hevc"?"o":s[0]==="vvc"?"v":"q"
+  });
+});
+
+/* ==================== 3. THREE.JS 3D 場景建置 ==================== */
+const container=document.getElementById('webgl-container');
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x040a14,0.0012);
+
+const camera=new THREE.PerspectiveCamera(50,window.innerWidth/window.innerHeight,0.1,3000);
+camera.position.set(0,180,500);
+
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.1;
+container.appendChild(renderer.domElement);
+
+// 光照系統
+const ambLight=new THREE.AmbientLight(0x1a2638,1.2);
+scene.add(ambLight);
+const dirLight=new THREE.DirectionalLight(0xdff4ff,1.5);
+dirLight.position.set(200,400,300);
+scene.add(dirLight);
+const goldRim=new THREE.PointLight(0xffd166,2.0,800);
+goldRim.position.set(-180,80,-100);
+scene.add(goldRim);
+
+// 背景星空 (白、淡藍、暖白，禁止青/金/紫資料色)
+const starCount=2200;
+const starGeo=new THREE.BufferGeometry();
+const starPos=new Float32Array(starCount*3);
+const starCol=new Float32Array(starCount*3);
+for(let i=0;i<starCount;i++){
+  const r=1000+rnd()*800, th=rnd()*Math.PI*2, ph=Math.acos(2*rnd()-1);
+  starPos[i*3]=r*Math.sin(ph)*Math.cos(th);
+  starPos[i*3+1]=r*Math.sin(ph)*Math.sin(th);
+  starPos[i*3+2]=r*Math.cos(ph);
+  const tone=rnd();
+  const c=tone>0.6?new THREE.Color(0xffffff):tone>0.3?new THREE.Color(0xdce7f5):new THREE.Color(0xf6ebd9);
+  starCol[i*3]=c.r;starCol[i*3+1]=c.g;starCol[i*3+2]=c.b;
+}
+starGeo.setAttribute('position',new THREE.BufferAttribute(starPos,3));
+starGeo.setAttribute('color',new THREE.BufferAttribute(starCol,3));
+const starMat=new THREE.PointsMaterial({size:2.4,vertexColors:true,transparent:true,opacity:0.75});
+const starField=new THREE.Points(starGeo,starMat);
+scene.add(starField);
+
+// 3D 魚幾何模型 (流線型立體幾何體)
+function createFishGeometry(){
+  const geom=new THREE.ConeGeometry(1.6,7.5,5);
+  geom.rotateX(Math.PI/2);
+  geom.scale(1,0.55,1);
+  return geom;
+}
+const fishGeo=createFishGeometry();
+const TOTAL_INSTANCES=FISH_DATA.length+NOISE_DATA.length+50;
+const fishMat=new THREE.MeshStandardMaterial({
+  roughness:0.35, metalness:0.2, transparent:true, opacity:0.92
+});
+const fishMesh=new THREE.InstancedMesh(fishGeo,fishMat,TOTAL_INSTANCES);
+fishMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+scene.add(fishMesh);
+
+// 3D 空間物件群組
+const groupOcean=new THREE.Group();
+const groupVortex=new THREE.Group();
+const groupSaturn=new THREE.Group();
+const groupNet=new THREE.Group();
+const groupEco=new THREE.Group();
+scene.add(groupOcean);scene.add(groupVortex);scene.add(groupSaturn);scene.add(groupNet);scene.add(groupEco);
+
+/* --- 土星錨點 3D 物件 (參考 THALASSA 精緻風格) --- */
+const saturnPlanetGeo=new THREE.SphereGeometry(68,48,48);
+const saturnPlanetMat=new THREE.MeshStandardMaterial({
+  color:0x0b1622, roughness:0.65, metalness:0.4,
+  emissive:0x030810
+});
+const saturnPlanet=new THREE.Mesh(saturnPlanetGeo,saturnPlanetMat);
+groupSaturn.add(saturnPlanet);
+
+// 細密金環 (金色同心圓環群)
+const ringsGroup=new THREE.Group();
+for(let i=0;i<18;i++){
+  const rad=105+i*5.2;
+  const ringG=new THREE.RingGeometry(rad,rad+0.7,72);
+  const ringM=new THREE.MeshBasicMaterial({color:0xe8c27a,side:THREE.DoubleSide,transparent:true,opacity:(i%3===0?0.85:0.35)});
+  const rm=new THREE.Mesh(ringG,ringM);
+  rm.rotation.x=Math.PI/2;
+  ringsGroup.add(rm);
+}
+groupSaturn.add(ringsGroup);
+
+// 直立刻度環儀
+const gateGeo=new THREE.TorusGeometry(125,1.8,16,100);
+const gateMat=new THREE.MeshStandardMaterial({color:0xe8c27a,metalness:0.8,roughness:0.2,emissive:0x4d3c1a});
+const saturnGate=new THREE.Mesh(gateGeo,gateMat);
+saturnGate.rotation.y=Math.PI/6;
+groupSaturn.add(saturnGate);
+
+// 全息底座
+const holoBaseG=new THREE.CylinderGeometry(140,150,4,64,1,true);
+const holoBaseM=new THREE.MeshBasicMaterial({color:0x5ff3ff,wireframe:true,transparent:true,opacity:0.25});
+const holoBase=new THREE.Mesh(holoBaseG,holoBaseM);
+holoBase.position.y=-120;
+groupSaturn.add(holoBase);
+
+/* --- 四大洋全景 3D 世代邊界與海峽 --- */
+const wallG=new THREE.PlaneGeometry(6,240);
+const wallM=new THREE.MeshBasicMaterial({color:0x7fe0d0,transparent:true,opacity:0.65,side:THREE.DoubleSide});
+const wallH264=new THREE.Mesh(wallG,wallM);
+wallH264.position.set(-280,0,0);
+groupOcean.add(wallH264);
+
+const straitUpperG=new THREE.PlaneGeometry(6,100);
+const straitLowerG=new THREE.PlaneGeometry(6,100);
+const straitM=new THREE.MeshBasicMaterial({color:0xc8b6ff,transparent:true,opacity:0.6,side:THREE.DoubleSide});
+const straitUp=new THREE.Mesh(straitUpperG,straitM);
+const straitDown=new THREE.Mesh(straitLowerG,straitM);
+straitUp.position.set(160,70,0);
+straitDown.position.set(160,-70,0);
+groupOcean.add(straitUp);groupOcean.add(straitDown);
+
+/* --- 撒網 vs 燈塔 3D 網與光錐 --- */
+const netMeshG=new THREE.PlaneGeometry(160,180,18,18);
+const netMeshM=new THREE.MeshBasicMaterial({color:0xdce6ec,wireframe:true,transparent:true,opacity:0.45,side:THREE.DoubleSide});
+const net3D=new THREE.Mesh(netMeshG,netMeshM);
+groupNet.add(net3D);
+
+const lightConeG=new THREE.ConeGeometry(120,400,32,1,true);
+lightConeG.translate(0,-200,0);
+lightConeG.rotateX(-Math.PI/2);
+const lightConeM=new THREE.MeshBasicMaterial({color:0xffd166,transparent:true,opacity:0.22,side:THREE.DoubleSide,depthWrite:false});
+const lightCone3D=new THREE.Mesh(lightConeG,lightConeM);
+groupNet.add(lightCone3D);
+
+/* ==================== 4. 狀態管理與動畫運算 ==================== */
+let MODE="ocean";
+let YEAR=2026;
+let SPEED=2;
+let COLORBY="arm";
+let SATURN_PHASE=4;
+let SATURN_CAM="orbit";
+let NET_STEP=0;
+let ECO_STEP=0;
+let ECO_BASE=43095;
+let ECO_PER=10000;
+let simTime=0;
+let caseFish=null;
+
+const DUMMY=new THREE.Object3D();
+const COLOR_TMP=new THREE.Color();
+
+// 預置魚實體物件位置與物理狀態
+const FISH_SIM=FISH_DATA.concat(NOISE_DATA).map((d,idx)=>({
+  data:d,
+  x:(rnd()-0.5)*600, y:(rnd()-0.5)*200, z:(rnd()-0.5)*400,
+  vx:0, vy:0, vz:0,
+  targetX:0, targetY:0, targetZ:0,
+  born:false, flash:0, dead:false
+}));
+
+/* 各分頁 3D 目標位置計算 */
+function updateFishTargets(t){
+  const straitOpen=YEAR<2015?0:YEAR<2018?0.35:1.0;
+  // 更新海峽水幕高度
+  straitUp.position.y=60+60*straitOpen;
+  straitDown.position.y=-60-60*straitOpen;
+
+  for(let i=0;i<FISH_SIM.length;i++){
+    const fs=FISH_SIM[i];
+    const d=fs.data;
+
+    if(MODE==="ocean"){
+      // 四大洋 X 分佈: H.264 (-420~-290), HEVC (-270~150), VVC (170~420), H.267 (430~580)
+      const isDead = (!d.ghost && YEAR >= d.fy + 20);
+      fs.dead = isDead;
+
+      let ox=0, oy=0, oz=(d.jit-0.5)*180;
+      if(d.who==="a"){ ox=-350+(d.jit-0.5)*90; oy=(d.r0-0.5)*90; }
+      else if(d.who==="q" || d.who==="s" || d.who==="o"){
+        ox=-80+(d.jit-0.5)*260;
+        oy=(d.r0-0.5)*120;
+        // 2018 後高通遷移魚流向 VVC
+        if(d.who==="q" && d.year>=2018 && YEAR>=2018){ ox=260+(d.jit-0.5)*120; }
+      } else if(d.who==="v"){
+        if(d.early && YEAR<2018){ ox=40+(d.jit-0.5)*100; oy=(d.r0-0.5)*90; }
+        else { ox=280+(d.jit-0.5)*160; oy=(d.r0-0.5)*110; }
+      } else { ox=-1000; } // 雜訊魚隱藏
+
+      if(isDead){ oy = -130 + (d.jit)*15; oz += 20; } // 沉底累積在海床
+      fs.targetX=ox; fs.targetY=oy; fs.targetZ=oz;
+
+    } else if(MODE==="vortex"){
+      // 三大漩渦：高通(-160,0), 三星(160,80), 其他(180,-70)
+      let cx=0, cy=0, rad=0, speed=0.001;
+      if(d.who==="q"){
+        cx=-150; cy=0; rad=30+d.r0*120; speed=0.0015;
+      } else if(d.who==="s"){
+        cx=160; cy=75; rad=25+d.r0*95; speed=-0.0012;
+      } else if(d.who==="o"){
+        cx=170; cy=-75; rad=30+d.r0*140; speed=0.0009;
+      } else { cx=9999; }
+      const ang=d.jit*Math.PI*2 + t*speed + Math.log(rad+1)*1.5;
+      fs.targetX=cx+Math.cos(ang)*rad;
+      fs.targetY=cy+Math.sin(ang)*rad*0.55;
+      fs.targetZ=(d.r0-0.5)*60;
+
+    } else if(MODE==="saturn"){
+      if(d.role==="core"){
+        const r=68*(0.3+0.7*Math.cbrt(d.r0));
+        const th=d.jit*Math.PI*2 + t*0.0004;
+        const ph=d.r0*Math.PI;
+        fs.targetX=r*Math.sin(ph)*Math.cos(th);
+        fs.targetY=r*Math.sin(ph)*Math.sin(th);
+        fs.targetZ=r*Math.cos(ph);
+      } else if(d.role==="B" || d.role==="A"){
+        const rad=d.role==="B" ? 115+(d.jit-0.5)*25 : 160+(d.jit-0.5)*35;
+        const ang=d.jit*Math.PI*2 + t*(d.role==="B"?0.0003:0.00018);
+        fs.targetX=Math.cos(ang)*rad;
+        fs.targetY=(d.jit-0.5)*12;
+        fs.targetZ=Math.sin(ang)*rad;
+      } else {
+        // 雜訊魚在外圍
+        const r=260+d.r0*150;
+        const th=d.jit*Math.PI*2 + t*0.0001;
+        fs.targetX=Math.cos(th)*r;
+        fs.targetY=(d.r0-0.5)*80;
+        fs.targetZ=Math.sin(th)*r;
+      }
+
+    } else if(MODE==="net"){
+      // 撒網 vs 燈塔：淺水區 (y>0) vs 法律上位深水區 (y<0)
+      const isDeep=(d.role==="A" || d.role==="B" || d.cites<10);
+      let sx=(d.jit-0.5)*360, sy=isDeep?-60-(d.r0)*70:40+(d.r0)*70, sz=(d.jit-0.5)*100;
+      if(NET_STEP===0){
+        // 網掃過
+        const netProg=((t*0.0008)%2)-1;
+        net3D.position.set(netProg*300,0,0);
+        if(Math.abs(sx-net3D.position.x)<40 && !isDeep){ sx=net3D.position.x; sz+=10; }
+      } else if(NET_STEP>=2){
+        lightCone3D.position.set(0,80,0);
+        lightCone3D.rotation.z=Math.sin(t*0.001)*0.4;
+      }
+      fs.targetX=sx; fs.targetY=sy; fs.targetZ=sz;
+
+    } else if(MODE==="eco"){
+      // 經濟效益漏斗與掃描排布
+      const colIdx=i%50, rowIdx=Math.floor(i/50);
+      fs.targetX=-250+colIdx*10;
+      fs.targetY=100-rowIdx*3.2;
+      fs.targetZ=(d.jit-0.5)*40;
+    }
+
+    // 物理平滑差值
+    fs.vx=fs.vx*0.82 + (fs.targetX-fs.x)*0.06;
+    fs.vy=fs.vy*0.82 + (fs.targetY-fs.y)*0.06;
+    fs.vz=fs.vz*0.82 + (fs.targetZ-fs.z)*0.06;
+    fs.x+=fs.vx; fs.y+=fs.vy; fs.z+=fs.vz;
+  }
+}
+
+/* 顏色計算 */
+function getFishColor(d,fs){
+  if(MODE==="saturn"){
+    if(d.role==="noise") return COLOR_TMP.set(0x3b4b5c);
+    if(SATURN_PHASE>=4 && d.multi) return COLOR_TMP.set(0xffd166);
+    if(d.role==="core") return COLOR_TMP.set(0x22e3ff);
+    if(d.role==="B") return COLOR_TMP.set(0x5ff3ff);
+    if(d.role==="A") return COLOR_TMP.set(0x8f7bff);
+  }
+  if(fs.dead) return COLOR_TMP.set(0x4a5b69);
+  if(d.ghost) return COLOR_TMP.set(0xffd166);
+  if(COLORBY==="geo") return COLOR_TMP.set(GEO_COL[d.geo]||0x4d6578);
+  if(COLORBY==="cite") return COLOR_TMP.set(CITE_COL(d.cites));
+  if(d.who==="q") return COLOR_TMP.set(ARM_COL[d.arm]||0x22e3ff);
+  if(d.who==="s") return COLOR_TMP.set(0x4f7bff);
+  if(d.who==="v") return COLOR_TMP.set(d.vcol||0x9d8fff);
+  return COLOR_TMP.set(0x6a5cff);
+}
+
+/* 主渲染循環 */
+let lastT=performance.now();
+function animate(now){
+  requestAnimationFrame(animate);
+  const dt=Math.min(50,now-lastT);
+  lastT=now;
+  simTime+=dt*SPEED;
+
+  updateFishTargets(simTime);
+
+  // 更新 InstancedMesh
+  for(let i=0;i<FISH_SIM.length;i++){
+    const fs=FISH_SIM[i];
+    const d=fs.data;
+
+    let visible=true;
+    if(MODE==="ocean"){
+      if(d.who==="n") visible=false;
+      if(d.who==="q" && d.year>YEAR) visible=false;
+      if(d.who!=="q" && d.who!=="a" && d.fy>YEAR) visible=false;
+    } else if(MODE==="vortex"){
+      if(d.who==="n" || d.who==="v") visible=false;
+      if(d.who==="q" && d.year>YEAR) visible=false;
+    } else if(MODE==="saturn"){
+      if(d.who!=="q" && d.role!=="noise") visible=false;
+      if(SATURN_PHASE===1 && d.role==="noise" && d.jit>0.2) visible=false;
+      if(SATURN_PHASE>=2 && d.role==="noise") visible=false;
+      if(SATURN_PHASE===2 && d.role!=="core") visible=false;
+    }
+
+    if(!visible){
+      DUMMY.position.set(99999,99999,99999);
+      DUMMY.updateMatrix();
+      fishMesh.setMatrixAt(i,DUMMY.matrix);
+      continue;
+    }
+
+    DUMMY.position.set(fs.x,fs.y,fs.z);
+    // 朝向速度向量
+    const dir=new THREE.Vector3(fs.vx,fs.vy,fs.vz);
+    if(dir.lengthSq()>0.01){
+      dir.normalize();
+      DUMMY.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),dir);
+    }
+    const sz=d.who==="o"?1.1:d.star?2.4:1.3+Math.min(Math.log10((d.cites||0)+1),2.8)*0.35;
+    DUMMY.scale.set(sz,sz,sz);
+    DUMMY.updateMatrix();
+    fishMesh.setMatrixAt(i,DUMMY.matrix);
+
+    getFishColor(d,fs);
+    fishMesh.setColorAt(i,COLOR_TMP);
+  }
+  fishMesh.instanceMatrix.needsUpdate=true;
+  if(fishMesh.instanceColor) fishMesh.instanceColor.needsUpdate=true;
+
+  // 3D 群組切換能見度與動畫
+  groupOcean.visible=(MODE==="ocean");
+  groupVortex.visible=(MODE==="vortex");
+  groupSaturn.visible=(MODE==="saturn");
+  groupNet.visible=(MODE==="net");
+  groupEco.visible=(MODE==="eco");
+
+  if(MODE==="saturn"){
+    saturnPlanet.rotation.y+=0.002*SPEED;
+    saturnGate.rotation.y+=0.001*SPEED;
+    ringsGroup.rotation.z+=0.0008*SPEED;
+  }
+
+  // 鏡頭運動控制
+  if(MODE==="saturn"){
+    if(SATURN_CAM==="far"){
+      camera.position.lerp(new THREE.Vector3(0,180,520),0.05);
+    } else if(SATURN_CAM==="orbit"){
+      const a=simTime*0.0003;
+      camera.position.lerp(new THREE.Vector3(Math.cos(a)*380,120,Math.sin(a)*380),0.05);
+    } else if(SATURN_CAM==="core"){
+      camera.position.lerp(new THREE.Vector3(0,40,160),0.05);
+    }
+    camera.lookAt(0,0,0);
+  } else if(MODE==="ocean"){
+    // 依年份緩慢平移視角
+    const camX=-150 + ((YEAR-2000)/33)*300;
+    camera.position.lerp(new THREE.Vector3(camX,120,440),0.04);
+    camera.lookAt(camX,0,0);
+  } else {
+    camera.position.lerp(new THREE.Vector3(0,90,480),0.05);
+    camera.lookAt(0,0,0);
+  }
+
+  renderer.render(scene,camera);
+}
+requestAnimationFrame(animate);
+
+/* ==================== 5. UI 與 HUD 控制邏輯 ==================== */
+function setMode(m){
+  MODE=m;
+  ['mOcean','mVortex','mSaturn','mNet','mEco'].forEach(id=>{
+    document.getElementById(id).setAttribute('aria-pressed',id===('m'+m.charAt(0).toUpperCase()+m.slice(1)));
+  });
+  document.getElementById('eco').hidden=(m!=="eco");
+  document.getElementById('desk').hidden=(m==="eco");
+  document.getElementById('deskNet').hidden=(m!=="net");
+  document.getElementById('deskVortex').hidden=!(m==="vortex"||m==="ocean");
+  document.getElementById('deskSaturn').hidden=(m!=="saturn");
+  document.getElementById('colorBy').hidden=!(m==="ocean"||m==="vortex");
+  document.querySelector('.clock').style.visibility=(m==="ocean"||m==="vortex")?"visible":"hidden";
+
+  const prov=document.getElementById('prov');
+  if(m==="ocean") prov.textContent="池內申請年依期末報告到期結構回推（到期＝申請＋20 年，中間年份內插）；高通依合併去重儀表板；H.264 為示意；2027 年後為推演。";
+  else if(m==="eco") prov.textContent="母數依期末報告；單件 US$10,000 依 TCL v. Ericsson 判決 p.30（Via Licensing）。魚為示意個體。";
+  else prov.textContent="模擬個體依簡報統計分布生成，非真實專利清單；匯入家族清單後可換成真實魚群。";
+
+  if(m==="ocean"){ yr.min=2000; yr.max=2033; play.textContent="▶ 播放 2000→2033"; setYear(YEAR); }
+  else if(m==="vortex"){ yr.min=2008; yr.max=2023; play.textContent="▶ 播放 2008→2023"; setYear(Math.min(2023,Math.max(2008,YEAR))); }
+  if(m==="eco") updateEcoUI();
+}
+
+document.getElementById('mOcean').onclick=()=>setMode('ocean');
+document.getElementById('mVortex').onclick=()=>setMode('vortex');
+document.getElementById('mSaturn').onclick=()=>setMode('saturn');
+document.getElementById('mNet').onclick=()=>setMode('net');
+document.getElementById('mEco').onclick=()=>setMode('eco');
+
+// 速度控制
+document.querySelectorAll('#speeds button').forEach(b=>{
+  b.onclick=()=>{
+    SPEED=+b.dataset.s;
+    document.querySelectorAll('#speeds button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  };
+});
+
+// 時間軸播放器
+const yr=document.getElementById('yr');
+const play=document.getElementById('play');
+let playTimer=null;
+function setYear(y){
+  YEAR=+y; yr.value=y;
+  document.getElementById('yrTxt').textContent=y;
+  const isPost2026 = (y>2026);
+  document.getElementById('yrBox').classList.toggle('ghost',isPost2026);
+  let milestone="推演";
+  for(const [my,lbl] of MILES){ if(y>=my) milestone=lbl; }
+  document.getElementById('yrLbl').textContent=milestone+(isPost2026?"（推演）":"");
+}
+yr.oninput=()=>setYear(yr.value);
+play.onclick=()=>{
+  if(playTimer){ clearInterval(playTimer); playTimer=null; play.textContent=`▶ 播放 ${yr.min}→${yr.max}`; return; }
+  play.textContent="❚❚ 暫停";
+  playTimer=setInterval(()=>{
+    let cur=+yr.value;
+    if(cur>=+yr.max){ clearInterval(playTimer); playTimer=null; play.textContent=`▶ 播放 ${yr.min}→${yr.max}`; return; }
+    setYear(cur+1);
+  }, 1600/SPEED);
+};
+
+// 上色維度切換
+function setColorBy(k){
+  COLORBY=k;
+  document.querySelectorAll('#colorBy button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.c===k));
+  if(k==="geo" && MODE==="ocean"){
+    const pct=(T,c)=>{const t=T.reduce((a,b)=>a+b[1],0),r=T.find(x=>x[0]===c);return r?Math.round(r[1]/t*1000)/10+"%":"—"};
+    const cs=["US","CN","JP","KR","TW","WO","其他"];
+    document.getElementById('cbLeg').innerHTML='<table class="geoT"><tr><th></th><th>高通</th><th>HEVC 池</th><th>VVC 池</th></tr>'+cs.map(c=>`<tr><td><i style="background:${GEO_COL[c]}"></i>${c}</td><td>${pct(GEO,c)}</td><td>${pct(HEVC_GEO,c)}</td><td>${pct(VVC_GEO,c)}</td></tr>`).join('')+'</table><p class="note">「其他」各池定義不同：高通含 TOP10 以外國家；HEVC 池為美中韓日以外；VVC 池為 TOP10 以外。</p>';
+    return;
+  }
+  const items = (k==="geo") ? GEO.map(([c,n,col])=>[c,col,n]) : (k==="cite") ? [["被引 51+（核心 152）","#ffd166",152],["31–50","#ff8a4c",411],["11–30","#3fa9e6",932],["1–10","#2b5d86",1549]] : ARMS.map(([c,l,n])=>[`${c} ${l}`,ARM_COL[c],n]);
+  document.getElementById('cbLeg').innerHTML=items.map(([t,c,n])=>`<div class="key"><i style="background:${c}"></i><span>${t}</span><em>${n.toLocaleString()}</em></div>`).join('');
+}
+document.querySelectorAll('#colorBy button').forEach(b=>b.onclick=()=>setColorBy(b.dataset.c));
+
+// 土星階段與視角切換
+const PHASES=[
+  ["Phase 0","關鍵字 / IPC 碗形撈取","~5,000+","高召回、大量雜訊，無法判斷真偽 SEP。灰魚是「長得像」但非 SEP 的家族。"],
+  ["Phase 1","PQAI 語意對標（寬閾值）","~1,700","精度提升，但純度稀釋：仍混有約 400 條雜訊魚。"],
+  ["Phase 2","PQAI 語意對標（嚴閾值）","~1,300","高純度核心球體，但卡在結構性天花板：技術語言與法律語言的鴻溝。"],
+  ["Phase 3","土星法 A∪B 擴充","擴充中","核心球體向外輻射：B 引用衛星環（引用前 10% 前後引用）＋A 提案人外環（JCT-VC 提案人＝發明人），召回率突破。"],
+  ["Phase 4","去重後獨立專利家族","3,044","7 個 Unit 來源原始 4,407 筆，刪除跨 Unit 重複 1,363 筆（30.9%）後得 3,044 件。金魚是被 2 個以上 Unit 同時找到的 1,112 件——多條路線都指向它，可信度最高。"]
+];
+const phBox=document.getElementById('phases');
+PHASES.forEach((p,i)=>{
+  const b=document.createElement('button');
+  b.type='button'; b.className='ph'; b.setAttribute('aria-pressed',i===SATURN_PHASE);
+  b.innerHTML=`<span class="n">${p[0]}</span><span class="t">${p[1]}</span><span class="c">${p[2]}</span>`;
+  b.onclick=()=>{
+    SATURN_PHASE=i;
+    [...phBox.children].forEach((x,j)=>x.setAttribute('aria-pressed',j===i));
+    document.getElementById('phaseNote').textContent=p[3];
+  };
+  phBox.appendChild(b);
+});
+document.getElementById('phaseNote').textContent=PHASES[4][3];
+
+document.querySelectorAll('#saturnViews button').forEach(b=>{
+  b.onclick=()=>{ SATURN_CAM=b.dataset.v; };
+});
+
+// 撒網 vs 燈塔 步驟
+const NET_STEPS=[
+  ["①","大網：IPC＋時間段","~5,000+","以 IPC 加時間段撈取五千多筆，撈上岸的幾乎都是灰色雜訊；抽 100 篇人工判讀，0 篇是 SEP。整網委外驗證 ≈ 5,000 × US$10,000＝US$5,000 萬。"],
+  ["②","細網：PQAI 語意對標","~1,300","網眼換成語意，但 1,744 條真 SEP 躲在法律上位語言深水區，網子撞上結構性天花板下不去。"],
+  ["③","土星燈塔：錨點輻射","3,044","以 1,300 條核心為燈塔，沿 B 引用網絡與 A 提案人光束照進深水，被照到的真 SEP 浮上來入軌。"],
+  ["④","聚光燈：先驗 152 件核心","152","燈塔收斂成聚光燈：被引 51 次以上的 152 件先交人工驗證，約 US$152 萬。示範魚 US 2014/0286413 A1 被引 88 次，但法律狀態是 Abandoned，說明為什麼要人工複核。"]
+];
+const netBox=document.getElementById('netSteps');
+NET_STEPS.forEach((s,i)=>{
+  const b=document.createElement('button');
+  b.type='button'; b.className='ph'; b.setAttribute('aria-pressed',i===0);
+  b.innerHTML=`<span class="n">${s[0]}</span><span class="t">${s[1]}</span><span class="c">${s[2]}</span>`;
+  b.onclick=()=>{
+    NET_STEP=i;
+    [...netBox.children].forEach((x,j)=>x.setAttribute('aria-pressed',j===i));
+    document.getElementById('netNote').textContent=s[3];
+    document.getElementById('nl1').textContent=i===3?"優先人工驗證":i===2?"入軌真 SEP":"網中魚數";
+    document.getElementById('nl2').textContent=i===0?"抽驗 100 篇中的 SEP":i===1?"深水未撈到的真 SEP":i===2?"被 2+ 個 Unit 找到（金）":"驗證費用（每件 1 萬美元）";
+    document.getElementById('nc1').textContent=i===3?"152":i===2?"3,044":i===1?"1,300":"5,000+";
+    document.getElementById('nc2').textContent=i===3?"$1.52M":i===2?"1,112":i===1?"1,744":"0 / 100";
+  };
+  netBox.appendChild(b);
+});
+document.getElementById('netNote').textContent=NET_STEPS[0][3];
+document.getElementById('nc1').textContent="5,000+";
+document.getElementById('nc2').textContent="0 / 100";
+document.getElementById('netReplay').onclick=()=>{ NET_STEP=0; };
+
+// 經濟效益模組計算與渲染
+const ECO_STEPS=[["①","人工逐件驗證"],["②","工具三階段漏斗"],["③","三星黃金集：重現率"],["④","總帳"]];
+const ecoSteps=document.getElementById('ecoSteps');
+ECO_STEPS.forEach((st,i)=>{
+  const b=document.createElement('button');
+  b.type='button'; b.className='ph'; b.setAttribute('aria-pressed',i===0);
+  b.innerHTML=`<span class="n">${st[0]}</span><span class="t">${st[1]}</span>`;
+  b.onclick=()=>{
+    ECO_STEP=i;
+    [...ecoSteps.children].forEach((x,j)=>x.setAttribute('aria-pressed',j===i));
+    updateEcoUI();
+  };
+  ecoSteps.appendChild(b);
+});
+const ecoBase=document.getElementById('ecoBase');
+BASES.forEach(([n,l])=>{
+  const b=document.createElement('button');
+  b.type='button'; b.textContent=l; b.setAttribute('aria-pressed',n===ECO_BASE);
+  b.onclick=()=>{
+    ECO_BASE=n;
+    [...ecoBase.children].forEach(x=>x.setAttribute('aria-pressed',x===b));
+    updateEcoUI();
+  };
+  ecoBase.appendChild(b);
+});
+document.getElementById('ecoPer').oninput=(e)=>{
+  ECO_PER=+e.target.value||10000; updateEcoUI();
+};
+
+function moneyStr(v){
+  return v>=1e6?"$"+(v/1e6).toFixed(v>=1e8?0:1)+"M":v>=1e3?"$"+Math.round(v).toLocaleString():"$"+v.toFixed(2);
+}
+function updateEcoUI(){
+  const N=ECO_BASE, H_PER=ECO_CONST.H_PER, H_YEAR=ECO_CONST.H_YEAR;
+  const mh=N*H_PER, mc=N*ECO_PER, ac=N*ECO_CONST.AI_PER;
+  const i=ECO_STEP;
+
+  document.getElementById('eBars').style.display=i===3?'grid':'none';
+  document.querySelector('.ecoGrid').style.display=i===3?'none':'grid';
+  document.querySelector('.ecoGrid').classList.toggle('four',i===2);
+  document.getElementById('eR').style.display=i===2?'block':'none';
+
+  document.getElementById('poolCost').innerHTML=
+    `<span>原始池 43,095 件全部以人工驗證</span><b>$${(43095*ECO_PER).toLocaleString()}</b><span>43,095 件 × $${ECO_PER.toLocaleString()} · ${Math.round(43095*H_PER).toLocaleString()} 小時（約 ${(43095*H_PER/H_YEAR).toFixed(1)} 年）</span>`;
+
+  if(i===0){
+    document.getElementById('eTl').textContent="耗時（假設每件 0.5 h）";
+    document.getElementById('eT').textContent=Math.round(mh).toLocaleString()+" h";
+    document.getElementById('eTs').textContent=`${N.toLocaleString()} 件 × 0.5 小時（假設）≈ ${(mh/H_YEAR).toFixed(1)} 年`;
+    document.getElementById('eCl').textContent="驗證費用（USD）";
+    document.getElementById('eC').textContent=moneyStr(mc);
+    document.getElementById('eCs').textContent=`${N.toLocaleString()} 件 × $${ECO_PER.toLocaleString()}`;
+    document.getElementById('eAl').textContent="結論重現率";
+    document.getElementById('eA').textContent="< 30%";
+    document.getElementById('eAs').textContent="不同專家判定常互相衝突";
+    document.getElementById('eNote').textContent=`一位專家一次看一件，人工時間以「假設每件 0.5 小時」估算，專利池等級驗證每件 $${ECO_PER.toLocaleString()}（Via Licensing 收費，見 TCL v. Ericsson 判決）。照這個速度，${N.toLocaleString()} 件要 ${Math.round(mh).toLocaleString()} 小時，約 ${(mh/H_YEAR).toFixed(1)} 年。`;
+  } else if(i===1){
+    document.getElementById('eTl').textContent="耗時";
+    document.getElementById('eT').textContent=ECO_CONST.AI_H+" h";
+    document.getElementById('eTs').textContent=`全池 ${N.toLocaleString()} 件 · 人工需 ${Math.round(mh).toLocaleString()} h（${(mh/ECO_CONST.AI_H).toFixed(0)}×）`;
+    document.getElementById('eCl').textContent="運算費用（USD）";
+    document.getElementById('eC').textContent=moneyStr(ac);
+    document.getElementById('eCs').textContent=`依 API 帳單 $11,035／1.7 萬件換算，約 $${ECO_CONST.AI_PER.toFixed(2)}／件`;
+    document.getElementById('eAl').textContent="可重驗性";
+    document.getElementById('eA').textContent="100%";
+    document.getElementById('eAs').textContent="同一參數檔重跑，結果誤差 0%";
+    document.getElementById('eNote').textContent="本工具以語意向量＋8 維度評分的三階段漏斗一次掃過全池。瓶頸在資料清洗，不在算力，全池 72 小時完成。";
+  } else if(i===2){
+    document.getElementById('eTl').textContent="工具未漏檢的三星 SEP";
+    document.getElementById('eT').textContent=ECO_CONST.TP.toLocaleString()+" / "+ECO_CONST.GOLD.toLocaleString();
+    document.getElementById('eTs').textContent="三星公告名單中工具未漏檢的件數（重現率 56%，同方法未調權重）";
+    document.getElementById('eCl').textContent="人工標註成本";
+    document.getElementById('eC').textContent="$0";
+    document.getElementById('eCs').textContent="答案卷＝專利池公告清單，不需人工標註";
+    document.getElementById('eAl').textContent="準確率（黃金集驗證高通名單）";
+    document.getElementById('eA').textContent="88%";
+    document.getElementById('eAs').textContent="F1 85.5%；回測準確率 89.2%（傳統方法 76%）";
+    document.getElementById('eNote').textContent="兩個數字要分開看：準確率 88%（F1 85.5%、換算召回率約 83%、回測 89.2%）是黃金集驗證高通名單的結果；再用同樣的方法、不調整權重，拿專利池公告的三星 2,381 件當答案卷，重現率 56%（工具未漏檢 1,333 件）。綠魚＝工具未漏檢，暗金框＝漏檢的 1,048 件。";
+  } else if(i===3){
+    document.getElementById('eNote').textContent="同一批專利，兩種做法的時間與費用。人工時間假設每件 0.5 小時；工具費用為運算帳單換算；人工費用依你設定的單件金額。";
+    const row=(lab,a,b,fa,fb,ca,cb)=>`<div class="brow"><span>${lab}</span><div class="btrack"><div class="bline"><i style="width:${fa}%;background:${ca}"></i><em>人工 ${a}</em></div><div class="bline"><i style="width:${fb}%;background:${cb}"></i><em>工具 ${b}</em></div></div></div>`;
+    document.getElementById('eBars').innerHTML=
+      row("耗時",Math.round(mh).toLocaleString()+" h（假設 0.5 h／件，"+(mh/H_YEAR).toFixed(1)+" 年）",ECO_CONST.AI_H+" h（"+(mh/ECO_CONST.AI_H).toFixed(0)+"× 快）",72,Math.max(1,72*ECO_CONST.AI_H/mh),"#ff6b6b","#3ddcff")+
+      row("費用",moneyStr(mc),moneyStr(ac)+"（依帳單 $11,035／1.7 萬件換算）",72,Math.max(1,72*ac/mc),"#ff6b6b","#3ddcff")+
+      `<div class="brow"><span>省下</span><div class="btrack"><div class="bline"><i style="width:72%;background:#ffd166"></i><em>${moneyStr(mc-ac)} · ${Math.round(mh-ECO_CONST.AI_H).toLocaleString()} 小時</em></div></div></div>`+
+      row("可重驗性","< 30%","100%",21.6,72,"#ff6b6b","#3ddcff")+
+      row("準確率","傳統交叉驗證 76%","回測 89.2%（精確率 88%、F1 85.5%；黃金集驗證高通名單）",72*0.76,72*0.892,"#ff6b6b","#3ddcff")+
+      `<div class="brow"><span>召回率</span><div class="btrack"><div class="bline"><i style="width:${72*0.83}%;background:#cdeeff"></i><em>工具 ≈ 83%（黃金集驗證高通名單，由 F1 換算）</em></div><div class="bline"><i style="width:${72*0.56}%;background:#9fd0f0"></i><em>工具 56%（同方法未調權重，三星公告 2,381 件未漏檢 1,333 件）</em></div></div></div>`;
+  }
+}
+
+// 請求項比對
+document.getElementById('drop').onclick=()=>{
+  const txt=document.getElementById('claims').value.toLowerCase();
+  const out=document.getElementById('matchOut');
+  const sc=Object.entries(ARM_KW).map(([k,kws])=>{
+    const hits=kws.filter(w=>txt.includes(w));
+    return {k,hits,score:hits.reduce((s,w)=>s+(txt.split(w).length-1),0)};
+  }).sort((a,b)=>b.score-a.score);
+  if(!sc[0].score){
+    out.innerHTML='<p class="note">沒有對到 HEVC 章節關鍵字，本案魚留在池外。</p>'; return;
+  }
+  const mx=sc[0].score;
+  out.innerHTML=sc.filter(s=>s.score).map(s=>`<span>${s.k} ${KW_LABEL[s.k]}</span><span>${s.score}</span><div class="bar"><span style="width:${s.score/mx*100}%"></span></div><span style="grid-column:1/-1;color:var(--dim);font-size:.7rem">命中：${s.hits.join('、')}</span>`).join('');
+  out.className='match';
+};
+document.getElementById('clearCase').onclick=()=>{
+  const o=document.getElementById('matchOut');
+  o.className=''; o.innerHTML='<p class="note">本案魚已移除。</p>';
+};
+
+// 側邊面板折疊處理
+[["ledger","簡報數字"],["desk","工具：本案比對 · 推演 · 階段"]].forEach(([id,title])=>{
+  const el=document.getElementById(id);
+  const body=document.createElement('div'); body.className='foldBody';
+  while(el.firstChild) body.appendChild(el.firstChild);
+  const b=document.createElement('button'); b.type='button'; b.className='fold';
+  b.textContent=title; b.setAttribute('aria-expanded','true');
+  b.onclick=()=>{
+    const open=el.classList.toggle('folded');
+    b.setAttribute('aria-expanded',String(!open));
+  };
+  el.appendChild(b); el.appendChild(body);
+});
+
+// 滑鼠 Raycasting 互動提示 (大魚公告號與一般魚資訊)
+const raycaster=new THREE.Raycaster();
+const mouse=new THREE.Vector2();
+const tip=document.getElementById('tip');
+
+window.addEventListener('pointermove',e=>{
+  mouse.x=(e.clientX/window.innerWidth)*2-1;
+  mouse.y=-(e.clientY/window.innerHeight)*2+1;
+
+  if(MODE==="eco"){ tip.hidden=true; return; }
+
+  raycaster.setFromCamera(mouse,camera);
+  const intersects=raycaster.intersectObject(fishMesh);
+  if(intersects.length>0){
+    const instId=intersects[0].instanceId;
+    const fs=FISH_SIM[instId];
+    if(!fs){ tip.hidden=true; return; }
+    const d=fs.data;
+
+    // 檢查是否為 STARS 裡的真實公告號大魚
+    const star=BIG_STARS.find(s=>s.who===d.who && s.cites===d.cites);
+    if(star){
+      tip.innerHTML=`<b>${star.no}</b><br>${star.pool==="hevc"?"HEVC 池 被引用第 "+star.rank+" 名":star.pool==="vvc"?"VVC 池 被引用第 "+star.rank+" 名":"高通 · 示範案"}<br>權利人：${star.own}<br>被引用 <b>${star.cites}</b> 次 · 申請 ${star.yr||star.fy}<br>${star.sum}<br>${fs.dead?"已屆 20 年，到期":"仍在有效期"}<br><span style="color:var(--dim)">出處：${star.pool==="q"?"Google Patents":"期末報告"}</span>`;
+    } else {
+      // 一般示意魚（絕不掛虛構公告號）
+      const whoStr=d.who==="q"?"Qualcomm（高通）":d.who==="s"?"Samsung（三星）":d.who==="v"?"VVC 池權利人":"其他權利人";
+      const armStr=d.arm?`${d.arm} ${ARM_SHORT[d.arm]||""}`:"";
+      tip.innerHTML=`<b>${whoStr}</b> (示意個體)<br>${armStr?armStr+"<br>":""}申請年約 ${Math.floor(d.fy||d.year)} · 被引 ${d.cites||0} 次${d.geo?" · 國別 "+d.geo:""}<br>${fs.dead?"已屆 20 年，到期":"仍在有效期"}<br><span style="color:var(--dim)">一般魚為依統計分布生成，無真實公告號</span>`;
+    }
+    tip.hidden=false;
+    tip.style.left=Math.min(e.clientX+16,window.innerWidth-290)+'px';
+    tip.style.top=(e.clientY+16)+'px';
+  } else {
+    tip.hidden=true;
+  }
+});
+window.addEventListener('pointerleave',()=>{ tip.hidden=true; });
+
+// 視窗自適應
+window.addEventListener('resize',()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
+
+// 初始化面板內容
+document.getElementById('armKeys').innerHTML=ARMS.map(([k,l,c])=>`<div class="key"><i style="background:${ARM_COL[k]}"></i><span>${k} ${l}</span><em>~${c.toLocaleString()}</em></div>`).join('');
+document.getElementById('geoKeys').innerHTML=GEO.map(([k,n,c])=>`<div class="key"><i style="background:${c}"></i><span>${k}</span><em>${n.toLocaleString()}</em></div>`).join('');
+setColorBy('arm');
+setMode('ocean');
+setYear(2026);
+</script>
+</body>
+</html>

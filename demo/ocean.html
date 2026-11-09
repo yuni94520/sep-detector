@@ -238,7 +238,7 @@ textarea{width:100%;min-height:110px;resize:vertical;box-sizing:border-box;backg
     <div class="m"><span id="eTl">耗時</span><b id="eT">—</b><small id="eTs"></small></div>
     <div class="m"><span id="eCl">驗證費用（USD）</span><b id="eC">—</b><small id="eCs"></small></div>
     <div class="m"><span id="eAl">準確率</span><b id="eA">—</b><small id="eAs"></small></div>
-    <div class="m recall" id="eR" style="display:none"><span>召回率</span><b>≈ 83%</b><small>三星 2,381 件中 AI 找回 1,980 件；由精確率 88% 與 F1 85.5% 換算</small></div>
+    <div class="m recall" id="eR" style="display:none"><span>召回率（重現率）</span><b>56%</b><small>三星公告名單 2,381 件中，工具未漏檢 1,333 件；同方法、未調權重</small></div>
   </div>
   <div id="eBars" hidden></div>
   <div class="poolcost" id="poolCost"></div>
@@ -990,12 +990,13 @@ function ocFrame(t,now){
 
 /* ======== 經濟效益 ======== */
 // figures from 「SEP 必要性檢測系統」(2026.02) + 期末報告 (2026.10): manual 0.5 h/筆 applied to 43,095 筆 (=0.5 h/筆, ≈10 年); system 72 h; AI API bill $11,035 for 1.7 萬件 (≈$0.65/件);
-// backtest accuracy 89.2% (傳統 76%); precision 88%, F1 85.5%; reproducibility <30% → 100%. Per-SEP manual verification cost: user setting ($5,000).
+// 準確率 88%＝驗證高通名單；三星公告名單重現率 56%（同方法未調權重）；人工時間假設每件 0.5 小時；單件驗證 US$10,000（Via Licensing）。
 const ECO={step:0,tt:0,base:43095,per:10000,fish:[],floats:[],insp:null,done:0,built:false};
 const BASES=[[3044,"高通 3,044"],[13506,"池內母數 13,506"],[43095,"原始池 43,095"]];
-const H_PER=0.5, H_YEAR=2102.4, AI_H=72, AI_PER=11035/17000, P=.88, F1=.855, REC=F1*P/(2*P-F1);
-const GOLD=2381, TP=Math.round(REC*GOLD), FN=GOLD-TP, FP=Math.round(TP*(1-P)/P);
-const ECO_STEPS=[["①","人工逐件驗證"],["②","AI 三階段漏斗"],["③","三星黃金集驗準確率"],["④","總帳"]];
+// 人工時間為假設值：每件 0.5 小時。P＝高通名單驗證準確率 88%；REC＝同方法未調權重、在三星公告名單的重現率 56%
+const H_PER=0.5, H_YEAR=2102.4, AI_H=72, AI_PER=11035/17000, P=.88, REC=.56;
+const GOLD=2381, TP=Math.round(REC*GOLD), FN=GOLD-TP, FP=0;
+const ECO_STEPS=[["①","人工逐件驗證"],["②","工具三階段漏斗"],["③","三星黃金集：重現率"],["④","總帳"]];
 const money=v=>v>=1e6?"$"+(v/1e6).toFixed(v>=1e8?0:1)+"M":v>=1e3?"$"+Math.round(v).toLocaleString():"$"+v.toFixed(2);
 const ecoSteps=document.getElementById('ecoSteps');
 ECO_STEPS.forEach((st,i)=>{const b=document.createElement('button');b.type='button';b.className='ph';b.innerHTML=`<span class="n">${st[0]}</span><span class="t"></span>`;b.querySelector('.t').textContent=st[1];b.onclick=()=>ecoStart(i);ecoSteps.appendChild(b)});
@@ -1013,21 +1014,21 @@ function ecoStart(i){ECO.step=i;ECO.tt=0;ECO.done=0;ECO.floats=[];ECO.insp={x:W*
   document.getElementById('eBars').style.display=i===3?'grid':'none';const eg=document.querySelector('.ecoGrid');eg.style.display=i===3?'none':'grid';eg.classList.toggle('four',i===2);document.getElementById('eR').style.display=i===2?'block':'none';
   document.getElementById('poolCost').innerHTML=`<span>原始池 43,095 件全部以人工驗證</span><b>$${(43095*ECO.per).toLocaleString()}</b><span>43,095 件 × $${ECO.per.toLocaleString()} · ${Math.round(43095*H_PER).toLocaleString()} 小時（約 ${(43095*H_PER/H_YEAR).toFixed(1)} 年）</span>`;
   const N=ECO.base,mh=N*H_PER;
-  const notes=["一位專家一次看一件：每件約 0.5 小時，專利池等級驗證每件 $"+ECO.per.toLocaleString()+"（Via Licensing 收費，見 TCL v. Ericsson 判決）；法院案中的 Concur IP 快篩平均每件約 20 分鐘、$100，只算粗篩。白點是已驗證的家族，飄起的金額是每一件的費用。照這個速度，"+N.toLocaleString()+" 件要 "+Math.round(mh).toLocaleString()+" 小時，約 "+(mh/H_YEAR).toFixed(1)+" 年。",
-    "語意向量＋8 維度評分的三階段漏斗一次掃過全池，聲納掃到的魚依必要性分數上色。瓶頸在資料清洗，不在算力，全池 72 小時完成。",
-    "答案卷不用人工標註：直接拿專利池公告的三星 2,381 件 SEP 當黃金集。綠魚＝AI 判為 SEP 且在名單上，紅魚＝AI 判為 SEP 但不在名單上，暗金框＝名單上但 AI 漏掉。",
-    "同一批專利，兩種做法的時間與費用。AI 費用為運算帳單換算；人工費用依你設定的單件金額。"];
+  const notes=["一位專家一次看一件，人工時間以「假設每件 0.5 小時」估算，專利池等級驗證每件 $"+ECO.per.toLocaleString()+"（Via Licensing 收費，見 TCL v. Ericsson 判決）；法院案中的 Concur IP 快篩平均每件約 20 分鐘、$100，只算粗篩。白點是已驗證的家族，飄起的金額是每一件的費用。照這個速度，"+N.toLocaleString()+" 件要 "+Math.round(mh).toLocaleString()+" 小時，約 "+(mh/H_YEAR).toFixed(1)+" 年。",
+    "本工具以語意向量＋8 維度評分的三階段漏斗一次掃過全池，聲納掃到的魚依必要性分數上色。瓶頸在資料清洗，不在算力，全池 72 小時完成。",
+    "兩個數字要分開看：準確率 88% 是用來驗證高通名單；再用同樣的方法、不調整權重，拿專利池公告的三星 2,381 件當答案卷，重現率 56%（工具未漏檢 1,333 件）。綠魚＝工具未漏檢，暗金框＝漏檢的 1,048 件。答案卷是公告清單，不需人工標註。",
+    "同一批專利，兩種做法的時間與費用。人工時間假設每件 0.5 小時；工具費用為運算帳單換算；人工費用依你設定的單件金額。"];
   document.getElementById('eNote').textContent=notes[i];
   if(i===3)renderBars()}
 function renderBars(){const N=ECO.base,mh=N*H_PER,mc=N*ECO.per,ac=N*AI_PER;
-  const row=(lab,a,b,fa,fb,ca,cb)=>`<div class="brow"><span>${lab}</span><div class="btrack"><div class="bline"><i style="width:${fa}%;background:${ca}"></i><em>人工 ${a}</em></div><div class="bline"><i style="width:${fb}%;background:${cb}"></i><em>AI ${b}</em></div></div></div>`;
+  const row=(lab,a,b,fa,fb,ca,cb)=>`<div class="brow"><span>${lab}</span><div class="btrack"><div class="bline"><i style="width:${fa}%;background:${ca}"></i><em>人工 ${a}</em></div><div class="bline"><i style="width:${fb}%;background:${cb}"></i><em>工具 ${b}</em></div></div></div>`;
   document.getElementById('eBars').innerHTML=
-   row("耗時",Math.round(mh).toLocaleString()+" h（"+(mh/H_YEAR).toFixed(1)+" 年）",AI_H+" h（"+(mh/AI_H).toFixed(0)+"× 快）",72,Math.max(.4,72*AI_H/mh),"#ff6b6b","#3ddcff")+
+   row("耗時",Math.round(mh).toLocaleString()+" h（假設 0.5 h／件，"+(mh/H_YEAR).toFixed(1)+" 年）",AI_H+" h（"+(mh/AI_H).toFixed(0)+"× 快）",72,Math.max(.4,72*AI_H/mh),"#ff6b6b","#3ddcff")+
    row("費用",money(mc),money(ac)+"（依帳單 $11,035／1.7 萬件換算）",72,Math.max(.4,72*ac/mc),"#ff6b6b","#3ddcff")+
    `<div class="brow"><span>省下</span><div class="btrack"><div class="bline"><i style="width:72%;background:#ffd166"></i><em>${money(mc-ac)} · ${Math.round(mh-AI_H).toLocaleString()} 小時</em></div></div></div>`+
    row("可重驗性","< 30%","100%",21.6,72,"#ff6b6b","#3ddcff")+
-   row("準確率","傳統交叉驗證 76%","回測 89.2%（精確率 88%、F1 85.5%）",72*.76,72*.892,"#ff6b6b","#3ddcff")+
-   `<div class="brow"><span>召回率</span><div class="btrack"><div class="bline"><i style="width:${72*REC}%;background:#cdeeff"></i><em>AI ≈ ${(REC*100).toFixed(0)}%（三星 2,381 件找回 ${TP.toLocaleString()} 件，由 F1 換算）</em></div></div></div>`}
+   row("準確率","傳統交叉驗證 76%","驗證高通名單 88%",72*.76,72*.88,"#ff6b6b","#3ddcff")+
+   `<div class="brow"><span>召回率</span><div class="btrack"><div class="bline"><i style="width:${72*REC}%;background:#cdeeff"></i><em>工具 56%（三星公告 2,381 件中未漏檢 ${TP.toLocaleString()} 件；同方法未調權重）</em></div></div></div>`}
 function setM(t,ts,c,cs,al,a,as,tl,cl){const g=id=>document.getElementById(id);g('eTl').textContent=tl||'耗時';g('eCl').textContent=cl||'驗證費用（USD）';g('eT').textContent=t;g('eTs').textContent=ts;g('eC').textContent=c;g('eCs').textContent=cs;g('eAl').textContent=al;g('eA').textContent=a;g('eAs').textContent=as}
 function ecoFrame(t,dt){
   if(!ECO.built||ECO.w!==W||ECO.h!==H)ecoBuild();
@@ -1043,16 +1044,16 @@ function ecoFrame(t,dt){
     const I=ECO.insp;if(!I.tgt||I.tgt.chk){let best=null,bd=1e12;for(const f of ECO.fish){if(f.chk)continue;const d=(f.x-I.x)**2+(f.y-I.y)**2;if(d<bd){bd=d;best=f}}I.tgt=best}
     if(I.tgt){I.x+=(I.tgt.x-I.x)*.06*SPEED;I.y+=(I.tgt.y-I.y)*.06*SPEED;if(Math.hypot(I.tgt.x-I.x,I.tgt.y-I.y)<5){I.tgt.chk=true;ECO.done++;ECO.floats.push({x:I.x,y:I.y,life:1,txt:"+$"+ECO.per.toLocaleString()})}}
     const k=ECO.done*scale,hh=k*H_PER;
-    setM(Math.round(hh).toLocaleString()+" h","全部 "+N.toLocaleString()+" 件需 "+Math.round(N*H_PER).toLocaleString()+" h ≈ "+(N*H_PER/H_YEAR).toFixed(1)+" 年",
-      money(k*ECO.per),"全部需 "+money(N*ECO.per)+"（單件 $"+ECO.per.toLocaleString()+"）","結論重現率","< 30%","不同專家判定常互相衝突")}
+    setM(Math.round(hh).toLocaleString()+" h","假設每件 0.5 小時：全部 "+N.toLocaleString()+" 件需 "+Math.round(N*H_PER).toLocaleString()+" h ≈ "+(N*H_PER/H_YEAR).toFixed(1)+" 年",
+      money(k*ECO.per),"全部需 "+money(N*ECO.per)+"（單件 $"+ECO.per.toLocaleString()+"）","結論重現率","< 30%","不同專家判定常互相衝突","耗時（假設每件 0.5 h）")}
   else if(st===1){const p=Math.min(1,t/5200);ringR=p*Math.hypot(W,H)*.75;
     for(const f of ECO.fish)if(!f.scan&&Math.hypot(f.x-cx,f.y-cy)<ringR)f.scan=true;
     const ac=N*AI_PER;
     setM((p*AI_H).toFixed(0)+" h","全池 "+N.toLocaleString()+" 件 · 人工需 "+Math.round(N*H_PER).toLocaleString()+" h（"+(N*H_PER/AI_H).toFixed(0)+"×）",
       money(p*ac),"依 API 帳單 $11,035／1.7 萬件換算，約 $"+AI_PER.toFixed(2)+"／件","可重驗性","100%","同一參數檔重跑，結果誤差 0%")}
   else if(st===2){const p=Math.min(1,t/4500);
-    setM(Math.round(p*TP).toLocaleString()+" / "+GOLD.toLocaleString(),"三星池內 SEP 被 AI 找回（召回率約 "+(REC*100).toFixed(0)+"%，由 F1 換算）",
-      "$0","答案卷＝專利池公告清單，不需人工標註","精確率 / F1","88% / 85.5%","回測準確率 89.2%（傳統方法 76%）","AI 找回的三星 SEP","人工標註成本");
+    setM(Math.round(p*TP).toLocaleString()+" / "+GOLD.toLocaleString(),"三星公告名單中工具未漏檢的件數（重現率 56%，同方法未調權重）",
+      "$0","答案卷＝專利池公告清單，不需人工標註","準確率（驗證高通名單）","88%","與三星重現率 56% 為不同檢驗","工具未漏檢的三星 SEP","人工標註成本");
     ECO.p2=p}
   else{setM("","","","","","","")}
   // draw fish into trail
@@ -1072,9 +1073,9 @@ function ecoFrame(t,dt){
     ctx.font="700 12px 'Noto Sans TC',sans-serif";ctx.fillStyle="#ffe6a0";ctx.textAlign="center";ctx.fillText("專家",I.x,I.y-22);
     ctx.font="500 12px 'IBM Plex Mono',monospace";ECO.floats.forEach(fl=>{fl.y-=.6*SPEED;fl.life-=.012*SPEED;ctx.globalAlpha=Math.max(0,fl.life);ctx.fillStyle="#ffd166";ctx.fillText(fl.txt,fl.x,fl.y)});ctx.globalAlpha=1;ECO.floats=ECO.floats.filter(f=>f.life>0)}
   if(st===1){ctx.strokeStyle="rgba(61,220,255,.6)";ctx.lineWidth=2;for(let k=0;k<3;k++){const r=ringR-k*60;if(r>0){ctx.globalAlpha=.6-k*.18;ctx.beginPath();ctx.arc(cx,cy,r,0,6.283);ctx.stroke()}}ctx.globalAlpha=1;
-    label(cx,ECO.top-14,"AI 三階段漏斗掃描",ringR>=Math.hypot(W,H)*.74?"完成 · 72 h":"掃描中…","#3ddcff")}
-  if(st===2)label(cx,ECO.top-14,"黃金集：專利池三星 2,381 件","綠 TP "+TP.toLocaleString()+" · 紅 FP ≈"+FP+" · 暗金 FN "+FN,"#4dff9a");
-  if(st===0)label(cx,ECO.top-14,"一條魚 ≈ "+scale+" 件 · 已驗證 "+(ECO.done*scale).toLocaleString()+" / "+N.toLocaleString(),"照這速度要 "+(N*H_PER/H_YEAR).toFixed(1)+" 年","#ffe6a0");
+    label(cx,ECO.top-14,"工具三階段漏斗掃描",ringR>=Math.hypot(W,H)*.74?"完成 · 72 h":"掃描中…","#3ddcff")}
+  if(st===2)label(cx,ECO.top-14,"黃金集：專利池三星公告 2,381 件","綠＝未漏檢 "+TP.toLocaleString()+" · 暗金＝漏檢 "+FN.toLocaleString()+" · 重現率 56%","#4dff9a");
+  if(st===0)label(cx,ECO.top-14,"一條魚 ≈ "+scale+" 件 · 已驗證 "+(ECO.done*scale).toLocaleString()+" / "+N.toLocaleString(),"假設每件 0.5 小時，約 "+(N*H_PER/H_YEAR).toFixed(1)+" 年","#ffe6a0");
 }
 /* fold panels like a dropdown */
 [["ledger","簡報數字"],["desk","工具：本案比對 · 推演 · 階段"]].forEach(([id,title])=>{const el=document.getElementById(id);const body=document.createElement('div');body.className='foldBody';

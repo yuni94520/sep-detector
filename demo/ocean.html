@@ -518,14 +518,14 @@ cv.addEventListener('pointermove',e=>{if(mode==="net"||mode==="eco")return;
 cv.addEventListener('pointerleave',()=>{hover=null;tip.hidden=true});
 
 /* ======== 撒網 vs 燈塔 ======== */
-const NET={step:4,tt:0,fish:[],bagX:0,bagY:0};
+const NET={step:0,tt:0,fish:[],bagX:0,bagY:0};
 const NET_STEPS=[
- ["②","大網：IPC＋時間段","~5,000+","以 IPC（H04N19）加申請時間段、或關鍵字加 IPC 撈，一網下去五千多筆——H04N19 涵蓋所有視訊編碼，連 1996 年的專利都在裡面。撈的時候每條魚看起來都一樣；上岸後抽 100 篇人工判讀，0 篇是 SEP。金魚是示意的極少數真 SEP。若整網委外驗證：5,000 筆 × US$10,000＝US$5,000 萬，幾乎都花在不是 SEP 的專利上。"],
- ["③","細網：PQAI 語意對標","~1,300","網眼換成語意，純度變高，只留下技術語言區的真 SEP。但 1,744 條真 SEP 躲在法律語言（上位化用語）的深水區，網子撞上結構性天花板下不去。"],
- ["④","土星燈塔：錨點輻射","3,044","以 1,300 條核心為燈塔，沿引用網絡（B 光束）與 JCT-VC 提案人（A 光束）照進深水。被照到的真 SEP 浮上來入軌，雜訊魚照到也不發光。金魚是被 2 個以上 Unit 同時找到的家族（全名單共 1,112 件）。"],
- ["⑤","聚光燈：先驗 152 件核心","152","燈塔收斂成聚光燈：被引 51 次以上的 152 件先交人工驗證，以專利池每件 10,000 美元計約 152 萬美元，只占 HEVC 原始池全驗（4.31 億美元）的 0.35%。示範魚 US 2014/0286413 A1（Disabling sign data hiding）被引 88 次、核心等級，但法律狀態是 Abandoned（已放棄）——這正是人工複核要把關的地方。"]];
+ ["①","大網：IPC＋時間段","~5,000+","以 IPC（H04N19）加申請時間段、或關鍵字加 IPC 撈，一網下去五千多筆——H04N19 涵蓋所有視訊編碼，連 1996 年的專利都在裡面。海裡其實有不少有顏色的真 SEP 在游，但網子一靠近牠們就從網邊溜走，撈上岸的幾乎都是灰色雜訊；抽 100 篇人工判讀，0 篇是 SEP。有色魚數量為示意。若整網委外驗證：5,000 筆 × US$10,000＝US$5,000 萬，幾乎都花在不是 SEP 的專利上。"],
+ ["②","細網：PQAI 語意對標","~1,300","網眼換成語意，純度變高，只留下技術語言區的真 SEP。但 1,744 條真 SEP 躲在法律語言（上位化用語）的深水區，網子撞上結構性天花板下不去。"],
+ ["③","土星燈塔：錨點輻射","3,044","以 1,300 條核心為燈塔，沿引用網絡（B 光束）與 JCT-VC 提案人（A 光束）照進深水。被照到的真 SEP 浮上來入軌，雜訊魚照到也不發光。金魚是被 2 個以上 Unit 同時找到的家族（全名單共 1,112 件）。"],
+ ["④","聚光燈：先驗 152 件核心","152","燈塔收斂成聚光燈：被引 51 次以上的 152 件先交人工驗證，以專利池每件 10,000 美元計約 152 萬美元，只占 HEVC 原始池全驗（4.31 億美元）的 0.35%。示範魚 US 2014/0286413 A1（Disabling sign data hiding）被引 88 次、核心等級，但法律狀態是 Abandoned（已放棄）——這正是人工複核要把關的地方。"]];
 NET_STEPS[4]=["①","對照：撒網 vs 燈塔","上／下","上半部：傳統 IPC＋時間段撒網，網子撈起一大堆，但有顏色的真 SEP 從網眼溜走，留在網裡的幾乎都是灰色雜訊。下半部：燈塔先掃海、找到真 SEP 最密集的群聚後鎖定照射，只對光圈裡的魚下網——撈起來的都是有色的 SEP。魚數為示意。"];
-const NET_ORDER=[4,0,1,2,3];
+const NET_ORDER=[0,1,2,3];
 const netBox=document.getElementById('netSteps');
 NET_ORDER.forEach(i=>{const s=NET_STEPS[i];const b=document.createElement('button');b.type='button';b.className='ph';b.dataset.i=i;
   b.innerHTML=`<span class="n">${s[0]}</span><span class="t"></span><span class="c">${s[2]}</span>`;b.querySelector('.t').textContent=s[1];b.onclick=()=>netStart(i);netBox.appendChild(b)});
@@ -540,9 +540,9 @@ function netBuild(){
   NET.fish.forEach(f=>{f.x=f.hx;f.y=f.hy;f.vx=0;f.vy=0;f.ph=rnd()*6.28;f.jit=rnd();f.th=rnd()*6.28});
   const real=NET.fish.filter(f=>f.kind!=="noise").sort(()=>rnd()-.5);
   real.forEach((f,i)=>{f.multi=i<1112;f.hot=false});
-  /* 撒網情境：IPC＋時間段撈到的魚中真 SEP 極少（示意） */NET.fish.forEach(f=>{f.sep0=rnd()<.012});[...real].sort(()=>rnd()-.5).slice(0,152).forEach((f,i)=>{f.hot=true;f.hi=i});NET.ex=real.find(f=>f.hot&&f.kind==="deep")}
+  /* 撒網情境：IPC＋時間段撈到的魚中真 SEP 極少（示意） */NET.fish.forEach(f=>{f.sep0=rnd()<.08;f.keep=rnd()<.1;f.col0=Object.values(ARM_COL)[Math.floor(rnd()*6)]});[...real].sort(()=>rnd()-.5).slice(0,152).forEach((f,i)=>{f.hot=true;f.hi=i});NET.ex=real.find(f=>f.hot&&f.kind==="deep")}
 function netStart(i){NET.step=i;NET.tt=0;NET.checked=0;if(!NET.fish.length||NET.lastW!==W||NET.lastH!==H){netBuild();NET.lastW=W;NET.lastH=H}
-  NET.fish.forEach(f=>{f.caught=false;f.lit=null;f.bx=(rnd()-.5);f.by=rnd()});
+  NET.fish.forEach(f=>{f.caught=false;f.esc=0;f.lit=null;f.bx=(rnd()-.5);f.by=rnd()});
   if(i>=2&&i<4)NET.fish.forEach(f=>{if(f.kind==="core")f.caught=true});
   if(i===4)splitStart();
   if(i===3)NET.fish.forEach(f=>{if(f.kind==="deep")f.lit=f.multi?"AB":f.role});
@@ -649,16 +649,18 @@ function netFrame(now){
   let caught=0,real=0,deepLeft=0,orbit=0,ab=0;const beams=st===2?[{a:Math.PI*.5+Math.sin(t*.00055)*1.32,col:"159,216,255",key:"B"},{a:Math.PI*.5+Math.sin(t*.00055+2.2)*1.32,col:"185,166,255",key:"A"}]:[];
   for(const f of NET.fish){
     let tx,ty;
-    if(st<2&&!f.caught&&p<1&&f.x<front&&f.x>front-netW&&f.y>netTop&&f.y<netBot){
-      if(st===0||f.kind==="core")f.caught=true}
+    if(st<2&&!f.caught&&!f.esc&&p<1&&f.x<front&&f.x>front-netW&&f.y>netTop&&f.y<netBot){
+      if(st===0&&f.sep0&&!f.keep){f.esc=t;{let x=20+rnd()*(W-40);if(x>W*.3&&x<W*.62)x=rnd()<.5?W*.3-rnd()*W*.25:W*.62+rnd()*W*.33;f.ex=x}f.ey=Math.max(z.sTop,Math.min(z.dBot,f.y+(rnd()-.5)*240))}
+      else if(st===0||f.kind==="core")f.caught=true}
     if(st===2&&f.kind==="deep"&&!f.lit){for(const b of beams){const dx=f.x-L.x,dy=f.y-L.y;const a=Math.atan2(dy,dx);let d=Math.abs(a-b.a);d=Math.min(d,6.283-d);
       if(d<.11&&Math.hypot(dx,dy)<Math.max(W,H)){if(f.role===b.key||f.multi){f.lit=f.multi?"AB":f.role}}}}
     if(f.caught&&st<2){const r=Math.min(W,H)*(st===0?.2*(1-haul*.15):.1*(1-haul*.5));tx=NET.bagX+f.bx*r*1.6;ty=NET.bagY+(f.by-.5)*r*2}
     else if(st===3&&f.hot){const a=f.th+t*.0005,rr=L.R*(1.15+.55*f.jit);tx=L.x+Math.cos(a)*rr;ty=L.y+Math.sin(a)*rr*.62;if(f===NET.ex){tx=L.x+L.R*2.6;ty=L.y+L.R*.9}}
     else if(st>=2&&f.kind==="core"){const a=f.th+t*.0004,rr=L.R*(.35+.65*f.jit);tx=L.x+Math.cos(a)*rr;ty=L.y+Math.sin(a*1.3)*rr*.9}
     else if(st>=2&&f.lit){const ring=f.role==="B"?1.9:f.role==="A"?2.9:2.4;const a=f.th+t*.00025*(3.2-ring);const r=L.R*(ring+(f.jit-.5)*.4);tx=L.x+Math.cos(a)*r;ty=L.y+Math.sin(a)*r*.28}
+    else if(st===0&&f.sep0){const bx=f.esc?f.ex:f.hx,by=f.esc?f.ey:f.hy;tx=bx+Math.cos(t*.0009+f.ph)*70+Math.sin(t*.0004+f.jit*9)*40;ty=by+Math.sin(t*.0011+f.ph*1.3)*28}
     else{tx=f.hx+Math.cos(t*.0004+f.ph)*14;ty=f.hy+Math.sin(t*.0006+f.ph*1.3)*6;if(st===1&&f.kind==="noise"&&Math.abs(f.x-front+netW*.5)<netW*.6&&f.y<z.ceil)tx+=12}
-    f.vx=f.vx*.8+(tx-f.x)*.07;f.vy=f.vy*.8+(ty-f.y)*.07;f.x+=f.vx+Math.cos(f.ph+t*.003)*.2;f.y+=f.vy;f.ph+=.12;
+    const kk=st===0&&f.esc&&t-f.esc<600?.16:.07;f.vx=f.vx*.8+(tx-f.x)*kk;f.vy=f.vy*.8+(ty-f.y)*kk;f.x+=f.vx+Math.cos(f.ph+t*.003)*.2;f.y+=f.vy;f.ph+=.12;
     if(f.caught&&st<2){caught++;if(f.kind!=="noise")real++}
     if(st===1&&f.kind==="deep")deepLeft++;
     if(st===2&&(f.kind==="core"||f.lit)){orbit++;if(f.lit==="AB")ab++}}
@@ -666,7 +668,7 @@ function netFrame(now){
   // draw fish
   const grp={dim:[],grey:[],blue:[],B:[],A:[],AB:[],gold0:[]};
   for(const f of NET.fish){
-    if(st===0)(f.caught?(haul>.6&&f.sep0?grp.gold0:grp.grey):grp.dim).push(f);
+    if(st===0)(f.sep0?grp.gold0:f.caught?grp.grey:grp.dim).push(f);
     else if(st===1)(f.caught?grp.blue:grp.dim).push(f);
     else if(st===3)(f.hot?grp.AB:grp.dim).push(f);
     else (f.kind==="core"?grp.blue:f.lit==="AB"?grp.AB:f.lit==="A"?grp.A:f.lit==="B"?grp.B:grp.dim).push(f)}
@@ -684,9 +686,11 @@ function netFrame(now){
     for(let y=0;y<=nh;y+=mesh){ctx.moveTo(nx,ny+y);ctx.lineTo(nx+nw,ny+y)}ctx.stroke();
     ctx.strokeStyle="rgba(220,230,236,.7)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(nx+nw,ny);ctx.lineTo(nx+nw,ny+nh);ctx.stroke();
     ctx.beginPath();ctx.moveTo(nx+nw,ny);ctx.lineTo(nx+nw+40,0);ctx.stroke();
-    if(st===0&&haul>.6){const gold=NET.fish.filter(f=>f.caught&&f.sep0).length;label(NET.bagX,NET.bagY-Math.min(W,H)*.17-40,"撈到 "+caught.toLocaleString()+" 筆","真 SEP（金，示意）只有 "+gold+" 條，其餘都不是",COL.gold)}
+    if(st===0&&haul>.6){const gold=NET.fish.filter(f=>f.caught&&f.sep0).length,all=NET.fish.filter(f=>f.sep0).length;label(NET.bagX,NET.bagY-Math.min(W,H)*.17-40,"撈到 "+caught.toLocaleString()+" 筆，有色 SEP 只有 "+gold+" 條","海裡 "+all+" 條有色 SEP，其餘都從網邊溜走（示意）",COL.gold)}
     if(st===1&&p>=1){label(NET.bagX,NET.bagY-80,"高純度，但只有 "+caught.toLocaleString(),"深水仍有 "+deepLeft.toLocaleString()+" 條真 SEP",COL.q)}}
-  if(st===0&&grp.gold0.length){ctx.save();ctx.shadowColor="#ffd166";ctx.shadowBlur=10;paint(grp.gold0,"#ffd166",1,3.6);ctx.restore()}
+  if(st===0&&grp.gold0.length){const bc=new Map();grp.gold0.forEach(f=>{(bc.get(f.col0)||bc.set(f.col0,[]).get(f.col0)).push(f)});
+    ctx.save();ctx.shadowBlur=8;for(const[c,arr]of bc){ctx.shadowColor=c;paint(arr,c,1,3.4)}ctx.restore();
+    NET.fish.forEach(f=>{if(f.esc&&t-f.esc<700){ctx.strokeStyle=`rgba(255,255,255,${1-(t-f.esc)/700})`;ctx.lineWidth=1;ctx.beginPath();ctx.arc(f.x,f.y,6+(t-f.esc)/60,0,6.28);ctx.stroke()}})}
   // 上岸抽驗：100 篇人工判讀，0 篇是 SEP
   if(st===0&&t>dur+1800){const k=Math.min(1,(t-dur-1800)/6500),n=Math.floor(k*100),cs=W<860?14:22,gx=W<860?16:Math.min(W-cs*10-60,NET.bagX+Math.min(W,H)*.2*.85*1.6+60),gy=H*.24;
     NET.checked=n;ctx.fillStyle="rgba(9,30,62,.86)";ctx.fillRect(gx-12,gy-46,cs*10+24,cs*10+104);
@@ -726,7 +730,7 @@ function netFrame(now){
   NET.tick=(NET.tick||0)+1;
   if(NET.tick%6===0){document.getElementById('nc1').textContent=(st>=2?orbit:caught).toLocaleString();document.getElementById('nc2').textContent=st===3?"$1.52M":st===0?"0 / "+(NET.checked||0):(st===1?deepLeft:ab).toLocaleString()}
 }
-netStart(4);
+netStart(0);
 /* ======== 四大洋全景：專利池生命週期 ======== */
 // 時間軸依期末報告：H.264/AVC 2003–04 定案；JCT-VC 2010；H.265 2013/04 批准；MPEG LA HEVC 池 2014；HEVC Advance 2015；JVET 探索 2015/10；
 // VVC 徵案 2017/10；Velos Media 2017 成立（高通加入）、2022 解散；JVET 標準化 2018/04；H.266 2020/07 定案；H.267 預計 2028–29。

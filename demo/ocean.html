@@ -500,7 +500,12 @@ document.getElementById('clearCase').onclick=()=>{caseFish=null;const o=document
 
 /* hover */
 const tip=document.getElementById('tip');
-cv.addEventListener('pointermove',e=>{if(mode==="net"||mode==="eco")return;let best=null,bd=144;for(const f of (mode==="ocean"?OC.fish:fish)){if(f.alpha<.35||(f.who==="o"&&mode!=="ocean"))continue;const dx=f.x-e.clientX,dy=f.y-e.clientY,d=dx*dx+dy*dy;if(d<bd){bd=d;best=f}}
+cv.addEventListener('pointermove',e=>{if(mode==="net"||mode==="eco")return;
+  if(mode==="ocean"){let bb=null,bdd=900;for(const f of OC.fish){if(!f.big||f.alpha<.3)continue;const d=(f.x-e.clientX)**2+(f.y-e.clientY)**2;if(d<bdd){bdd=d;bb=f}}
+    if(bb){hover=bb;const B=bb.big,dead=ocDead(bb);const pl=B.pool==="hevc"?"HEVC 池 被引用第 "+B.rank+" 名":B.pool==="vvc"?"VVC 池 被引用第 "+B.rank+" 名":"高通 · 撒網 vs 燈塔示範案";
+      tip.innerHTML=`<b style="font-family:var(--f-mono)">${esc(B.no)}</b><br>${esc(pl)}<br>權利人：${esc(B.own)}<br>被引用 <b>${B.cites}</b> 次${B.yr?" · 申請 "+esc(B.yr):""}<br>${esc(B.sum)}${B.pool!=="q"?"<br>"+(dead?"已屆 20 年，到期":"仍在有效期"):""}<br><span style="color:var(--dim)">出處：${B.pool==="q"?"Google Patents":"期末報告表 "+(B.pool==="hevc"?"11":"13")}</span>`;
+      tip.hidden=false;tip.style.left=Math.min(e.clientX+14,W-290)+'px';tip.style.top=(e.clientY+14)+'px';return}}
+  let best=null,bd=144;for(const f of (mode==="ocean"?OC.fish:fish)){if(f.alpha<.35||f.big||(f.who==="o"&&mode!=="ocean"))continue;const dx=f.x-e.clientX,dy=f.y-e.clientY,d=dx*dx+dy*dy;if(d<bd){bd=d;best=f}}
   hover=best;if(!best){tip.hidden=true;return}
   if(mode==="ocean"&&best.who!=="q"){const nm={a:"H.264 池（示意）",s:"Samsung · HEVC 池",o:"其他權利人 · HEVC 池",v:esc(best.vk||"")+" · VVC 池"}[best.who];
     const per=best.who==="v"?"1 條＝4 件":best.who==="a"?"示意個體":"1 條＝8 件";
@@ -642,6 +647,29 @@ const MILES=[[2000,"H.264 研發中"],[2003,"H.264／AVC 定案"],[2004,"VCEG �
  [2026,"今天"],[2027,"推演"],[2028,"H.267 預計定案"],[2032,"HEVC 到期高峰 4,711"]];
 const phaseOf=y=>{let m=MILES[0][1];for(const[yy,t]of MILES)if(y>=yy)m=t;return m};
 const OC={fish:[],tr:[],schools:[],tt:0,built:false,q:{},yf:OC_NOW};
+// 名魚：期末報告表 11（HEVC 池被引用前 10 名）、表 13（VVC 池被引用前 10 名），每條＝1 件真實專利；fy 用於動畫出生／到期，yr 為報告載明的申請時間
+const STARS=[
+ ["hevc",1,"US 6728317 B1","杜比實驗室授權公司（DLLC）",880,2001,"2000–2003 年間","帶負波瓣的位移濾波器，提升次像素插值（運動補償）品質"],
+ ["hevc",2,"US 7266150 B2","杜比實驗室授權公司（DLLC）",513,2002,"2000–2003 年間","雙向預測幀的像素插值與不對等加權"],
+ ["hevc",3,"US 7003035 B2","微軟",374,2002,"2000–2003 年間","改進直接預測模式，不傳完整運動向量即可推導運動資訊"],
+ ["hevc",4,"US 6816552 B2","杜比實驗室授權公司（DLLC）",253,2001,"2000–2003 年間","B 幀依時間距離加權並混合的插值"],
+ ["hevc",5,"US 7379608 B2","弗勞恩霍夫協會",205,2003,"2000–2003 年間","CABAC 轉換係數的掃描模式切換"],
+ ["hevc",6,"US 6894628 B2","杜比視訊壓縮（DVC）",186,2003,"2000–2003 年間","CABAC 上下文變數初始化"],
+ ["hevc",7,"US 6507618 B1","杜比國際 AB",173,2000,"2000–2003 年間","獨立編碼區域的壓縮影片訊號架構"],
+ ["hevc",8,"US 7733960 B2","松下電器",161,2002,"2000–2003 年間","直接模式下多運動向量參考區塊的運動向量計算"],
+ ["hevc",9,"US 9049452 B2","寰發（HFI）",149,2011,"2011 年","HEVC 編碼單元四元樹分割的限制性壓縮，前十名中唯一距到期尚久"],
+ ["hevc",10,"US 6900748 B2","杜比視訊壓縮（DVC）",142,2003,"2000–2003 年間","二值化與二進位算術編碼混合方法"],
+ ["vvc",1,"US 10841609 B1","字節跳動",119,2020,"約 2020 年","仿射模式的自適應運動向量解析度（AMVR）"],
+ ["vvc",2,"US 10939128 B2","字節跳動",71,2020,"約 2020 年","跨分量線性模型（CCLM）參數推導簡化，對應 VVC §8.1.1"],
+ ["vvc",3,"US 10390050 B2","寰發（HFI）",70,2016,"","亮度與色度分離編碼樹（Separate Coding Tree）"],
+ ["vvc",4,"US 8792739 B2","太陽專利信託",67,2012,"2012 年","降低 CABAC 上下文記憶體，對應 VVC §7.4.12.5"],
+ ["vvc",5,"US 8743969 B2","太陽專利信託",65,2012,"2012 年","CABAC 上下文模型簡化（系列延伸）"],
+ ["vvc",6,"US 10284860 B1","騰訊",64,2018,"","非方形區塊的廣角畫面內預測"],
+ ["vvc",6,"US 8811762 B2","太陽專利信託",64,2012,"2012 年","運動向量差值的 CABAC 上下文簡化，對應 VVC §9.3.4.2.1"],
+ ["vvc",8,"US 10587859 B2","寰發（HFI）",61,2015,"","3D／多視角的 Sub-PU 視角間運動預測"],
+ ["vvc",9,"US 8913665 B2","太陽專利信託",57,2012,"2012 年","依長期／短期參考幀調整的時間運動向量預測（TMVP）"],
+ ["vvc",10,"US 11146785 B2","字節跳動",55,2020,"約 2020 年","更新運動資訊查找表（HMVP LUT）"],
+ ["q",0,"US 2014/0286413 A1","高通",88,2014,"2014 年","Disabling sign data hiding（無損／DPCM 時停用符號資料隱藏）；法律狀態 Abandoned"]];
 const OCEANS=[
  {k:"h264",name:"H.264／AVC 洋",x0:0,x1:.17,col:[38,150,150]},
  {k:"hevc",name:"HEVC／H.265 洋",x0:.17,x1:.56,col:[30,120,255]},
@@ -677,13 +705,15 @@ function ocBuild(){
   const qv=[mkS("q","vvc",70),mkS("q","vvc",70)];
   qFish.forEach(f=>add({who:"q",arm:f.arm,geo:f.geo,year:f.year,fy:f.year+rnd(),cites:f.cites,star:f.star,school:f.year>=2018?qv[f.jit<.5?0:1]:OC.q[f.arm],migr:f.year>=2018}));
   ghosts.forEach(g=>add({who:"q",arm:g.arm,year:g.year,fy:g.year+rnd(),ghost:true,cites:0,school:qv[g.jit<.5?0:1]}));
+  STARS.forEach(([pool,rank,no,own,cites,fy,yr,sum])=>{const sch=pool==="hevc"?os[rank%4]:pool==="vvc"?(fy<=2017?vwait:vs[rank%3]):OC.q["2B"];
+    add({who:pool==="hevc"?"o":pool==="vvc"?"v":"q",big:{pool,rank,no,own,cites,yr,sum},fy:fy+.5,cites,school:sch,vhome:pool==="vvc"?vs[rank%3]:undefined,wait:vwait,early:pool==="vvc"&&fy<=2017,vk:own,vcol:"#ffd166",migr:false})});
   OC.tr=[];for(let i=0;i<1700;i++)OC.tr.push({x:rnd()*W,y:TOPY()+rnd()*(BOTY()-TOPY()),life:rnd()*200});
   OC.built=true;OC.w=W;OC.h=H}
 const ocBorn=f=>OC.yf>=f.fy-1, ocDead=f=>!f.ghost&&OC.yf>=f.fy+20;
 function ocColor(f){if(ocDead(f))return "#4a5b69";if(COLORBY==="geo"&&f.who!=="a"&&f.who!=="q")return GEO_COL[f.geo]||"#4d6578";if(f.who==="v")return f.vcol;if(f.who==="q")return qCol(f);if(f.who==="a")return "#46c3b4";
   if(f.who==="s")return S_COLS[Math.floor(f.jit*S_COLS.length)];return O_COLS[Math.floor(f.jit*O_COLS.length)]}
 function ocCounts(){const c={hevcB:0,hevcD:0,vvcB:0,vvcD:0,avcB:0,avcD:0,q:0,qv:0};
-  for(const f of OC.fish){if(!ocBorn(f))continue;const d=ocDead(f);
+  for(const f of OC.fish){if(!ocBorn(f)||f.big)continue;const d=ocDead(f);
     if(f.who==="s"||f.who==="o"){c.hevcB+=HEVC_PER;if(d)c.hevcD+=HEVC_PER}else if(f.who==="v"){c.vvcB+=VVC_PER;if(d)c.vvcD+=VVC_PER}
     else if(f.who==="a"){c.avcB++;if(d)c.avcD++}else if(f.who==="q"&&!f.ghost){c.q++;if(f.migr)c.qv++}}
   c.hevcB=Math.min(13506,c.hevcB);c.vvcB=Math.min(3076,c.vvcB);return c}
@@ -798,13 +828,21 @@ function ocFrame(t,now){
     const o=OCEANS.find(o=>p.x/W<o.x1)||OCEANS[3];(byO.get(o)||byO.set(o,[]).get(o)).push(p)}
   for(const[o,arr]of byO){const cc=o.col;ctx.fillStyle=`rgba(${Math.min(255,cc[0]+90)},${Math.min(255,cc[1]+90)},${Math.min(255,cc[2]+60)},.55)`;ctx.beginPath();arr.forEach(p=>{ctx.moveTo(p.x+1.1,p.y);ctx.arc(p.x,p.y,1.1,0,6.283)});ctx.fill()}
   ctx.globalCompositeOperation="source-over";const groups=new Map();
-  for(const f of OC.fish){if(f.alpha<.03||f.died)continue;const key=(f.ghost?"G":ocColor(f))+"|"+Math.round(f.alpha*4);(groups.get(key)||groups.set(key,[]).get(key)).push(f)}
+  for(const f of OC.fish){if(f.alpha<.03||f.died||f.big)continue;const key=(f.ghost?"G":ocColor(f))+"|"+Math.round(f.alpha*4);(groups.get(key)||groups.set(key,[]).get(key)).push(f)}
   for(const[key,arr]of groups){const[col,a]=key.split("|");ctx.globalAlpha=Math.min(1,a/4)*.9;ctx.beginPath();
     arr.forEach(f=>fishPath(f,f.who==="o"||f.who==="a"?2.2:(1.8+Math.min(Math.log10(f.cites+1),2.9)*.7)));
     if(col==="G"){ctx.strokeStyle=COL.gold;ctx.lineWidth=1;ctx.stroke()}else{ctx.fillStyle=col;ctx.fill()}}
   ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";ctx=MAIN;
   ctx.globalCompositeOperation="lighter";ctx.drawImage(trail,0,0,W,H);ctx.globalCompositeOperation="source-over";
-  ctx.globalAlpha=.45;ctx.fillStyle="#56697a";ctx.beginPath();for(const f of OC.fish)if(f.died&&f.alpha>.03)fishPath(f,1.9);ctx.fill();ctx.globalAlpha=1;
+  ctx.globalAlpha=.45;ctx.fillStyle="#56697a";ctx.beginPath();for(const f of OC.fish)if(f.died&&!f.big&&f.alpha>.03)fishPath(f,1.9);ctx.fill();ctx.globalAlpha=1;
+  // 名魚：報告中被引用前 10 名（大魚、金邊；到期後變灰但仍保留大小）
+  for(const f of OC.fish){if(!f.big||f.alpha<.05)continue;const B=f.big,sz=6.5+Math.sqrt(B.cites)/3.6,dead=f.died;
+    ctx.globalAlpha=Math.min(1,f.alpha/(dead?.4:1));
+    if(!dead){const gl=ctx.createRadialGradient(f.x,f.y,0,f.x,f.y,sz*3.2);gl.addColorStop(0,"rgba(255,209,102,.45)");gl.addColorStop(1,"rgba(255,209,102,0)");ctx.fillStyle=gl;ctx.beginPath();ctx.arc(f.x,f.y,sz*3.2,0,6.28);ctx.fill()}
+    ctx.beginPath();fishPath(f,sz);ctx.fillStyle=dead?"#b8ab80":B.pool==="vvc"?"#ffc6f0":B.pool==="q"?"#00e5ff":"#ffd166";ctx.fill();
+    ctx.lineWidth=2;ctx.strokeStyle=dead?"rgba(255,209,102,.8)":"#fff";if(dead)ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
+    if(W>=860){ctx.font="700 10px 'IBM Plex Mono',monospace";ctx.textAlign="center";ctx.fillStyle=dead?"rgba(230,239,243,.55)":"#fff";ctx.fillText((B.pool==="q"?"高通 ":B.pool==="vvc"?"VVC #":"HEVC #")+(B.pool==="q"?"":B.rank),f.x,f.y-sz*1.5)}}
+  ctx.globalAlpha=1;
   // 出生閃光（白）與到期閃光（紅灰）：年代切換時看得到增減
   for(const f of OC.fish){if(!f.flash)continue;const a=Math.abs(f.flash);if(a<.03){f.flash=0;continue}
     ctx.globalAlpha=a*.9;ctx.fillStyle=f.flash>0?"#ffffff":"#ff8a8a";ctx.beginPath();fishPath(f,(f.flash>0?3.4:2.8)*(1+a*.6));ctx.fill();f.flash*=.975}
@@ -812,7 +850,7 @@ function ocFrame(t,now){
   // legend
   const lx=Math.max(16,W*OCK.hevc.x0+12),ly=bot+6;ctx.font="500 11px 'Noto Sans TC',sans-serif";ctx.textAlign="left";
   const qLeg=COLORBY==="geo"?"Qualcomm（依公告國家）":COLORBY==="cite"?"Qualcomm（依被引用）":"Qualcomm（依 Unit）";
-  [[qLeg+" · 1 條＝1 族",ARM_COL["6B"]],["Samsung · 1 條＝8 件",S_COLS[0]],["其他池內 · 1 條＝8 件",O_COLS[0]],["VVC 池 · 1 條＝4 件","#c8b6ff"],["已到期（20 年）","#4a5b69"],["推演",COL.gold]]
+  [["大魚＝被引用前 10 名（滑鼠看公告號）","#ffd166"],[qLeg+" · 1 條＝1 族",ARM_COL["6B"]],["Samsung · 1 條＝8 件",S_COLS[0]],["其他池內 · 1 條＝8 件",O_COLS[0]],["VVC 池 · 1 條＝4 件","#c8b6ff"],["已到期（20 年）","#4a5b69"],["推演",COL.gold]]
     .reduce((x,[tt,cc])=>{if(x>W-40)return x;ctx.fillStyle=cc;ctx.fillRect(x,ly+4,10,4);ctx.fillStyle="#9fb4bf";ctx.fillText(tt,x+14,ly+10);return x+ctx.measureText(tt).width+30},lx);
   ocStrip(top,bot);
   const st=OC.fish.find(f=>f.star);if(st&&st.alpha>.3){ctx.strokeStyle=COL.gold;ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(st.x,st.y,9+Math.sin(now*.004)*2,0,6.28);ctx.stroke()}

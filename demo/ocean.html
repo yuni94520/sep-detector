@@ -407,6 +407,14 @@ function drawBatch(list,alphaMul){
     ctx.beginPath();arr.forEach(f=>fishPath(f,sizeOf(f)));
     if(g){ctx.setLineDash([2,2]);ctx.strokeStyle=COL.gold;ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([])}else{ctx.fillStyle=col;ctx.fill()}}
   ctx.globalAlpha=1}
+const VWAVES=[];
+function drawVortexWaves(t){
+  // 水波紋：每個漩渦由中心持續外擴三道同心波；年份前進時，高通漩渦打出一道較強的衝擊波（畫在魚群上方）
+  for(const k of["o","s","q"]){const V=VX[k],off=k==="q"?0:k==="s"?.33:.66;
+    for(let i=0;i<3;i++){const p=((t*.00022)+i/3+off)%1,r=V.R*(.12+1.08*p);ctx.strokeStyle=hexA(V.col,.7*(1-p));ctx.lineWidth=2;ctx.save();ctx.shadowColor=V.col;ctx.shadowBlur=8;ctx.beginPath();ctx.ellipse(V.x,V.y,r,r*.86,0,0,6.28);ctx.stroke();ctx.restore()}}
+  for(let i=VWAVES.length-1;i>=0;i--){const w=VWAVES[i],p=(performance.now()-w.t0)/1600;if(p>1){VWAVES.splice(i,1);continue}
+    const V=VX[w.k],r=V.R*(.2+1.2*p);ctx.strokeStyle=hexA(V.col,.95*(1-p));ctx.lineWidth=4*(1-p)+.8;ctx.beginPath();ctx.ellipse(V.x,V.y,r,r*.86,0,0,6.28);ctx.stroke();
+    ctx.strokeStyle=`rgba(255,255,255,${.8*(1-p)})`;ctx.lineWidth=1.4;ctx.beginPath();ctx.ellipse(V.x,V.y,r*.94,r*.94*.86,0,0,6.28);ctx.stroke()}}
 function drawVortexBg(t){
   for(const k of["o","s","q"]){const V=VX[k];
     const g=ctx.createRadialGradient(V.x,V.y,0,V.x,V.y,V.R*1.15);
@@ -508,6 +516,11 @@ function frame(now){
   else drawBatch(fish,1);
   ctx.globalCompositeOperation="source-over";ctx=MAIN;ctx.globalCompositeOperation="lighter";ctx.drawImage(trail,0,0,W,H);ctx.globalCompositeOperation="source-over";
   if(mode==="saturn")drawRingDust(t,true);
+  if(mode==="vortex")drawVortexWaves(t);
+  for(const f of fish){if(!f.big||f.alpha<.3)continue;const B=f.big,sz=4.4+Math.min(2,Math.sqrt(B.cites)/15),br=.5+.5*Math.sin(now*.0032+B.rank*1.7),c=B.pool==="q"?["#22e3ff","#c9fbff"]:["#ffd166","#fff1c2"];
+    ctx.strokeStyle=c[0];ctx.globalAlpha=.6*(1-br);ctx.lineWidth=1;ctx.beginPath();ctx.arc(f.x,f.y,sz*(1.4+2.6*br),0,6.28);ctx.stroke();ctx.globalAlpha=1;
+    ctx.save();ctx.shadowColor=c[0];ctx.shadowBlur=16+12*br;ctx.beginPath();fishPath(f,sz);ctx.fillStyle=c[0];ctx.fill();ctx.restore();ctx.beginPath();fishPath(f,sz*.55);ctx.fillStyle=c[1];ctx.fill();
+    if(W>=860&&mode==="vortex"){ctx.font="500 9px 'IBM Plex Mono',monospace";ctx.textAlign="left";ctx.fillStyle=c[1];ctx.fillText(B.pool==="q"?"QCOM · 88":"HEVC #"+B.rank,f.x+sz*1.6,f.y-sz*1.4)}}
   // star family
   const st=qFish[0];if(st.alpha>.3){ctx.strokeStyle=COL.gold;ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(st.x,st.y,9+Math.sin(now*.004)*2,0,6.28);ctx.stroke()}
   if(caseFish&&mode==="vortex"){ctx.save();ctx.shadowColor="#fff";ctx.shadowBlur=16;ctx.fillStyle="#fff";ctx.beginPath();fishPath(caseFish,6);ctx.fill();ctx.restore();
@@ -546,7 +559,7 @@ document.getElementById('mNet').onclick=()=>setMode("net");document.getElementBy
 document.querySelectorAll('#speeds button').forEach(b=>b.onclick=()=>{SPEED=+b.dataset.s;document.querySelectorAll('#speeds button').forEach(x=>x.setAttribute('aria-pressed',x===b))});
 document.getElementById('ledgerBtn').onclick=()=>document.getElementById('ledger').classList.toggle('open');
 const yr=document.getElementById('yr');
-function setYear(y){y=+y;if(mode==="ocean"&&typeof OC!=="undefined"){if(y<year)OC.pops=[];else if(y>year&&y-year<=3)for(let k=year+1;k<=y;k++)ocYearPops(k)}year=y;yr.value=y;document.getElementById('yrTxt').textContent=y;
+function setYear(y){y=+y;if(mode==="vortex"&&y>year&&typeof VWAVES!=="undefined"){VWAVES.push({k:"q",t0:performance.now()});if(y<=2014)VWAVES.push({k:"s",t0:performance.now()+200})}if(mode==="ocean"&&typeof OC!=="undefined"){if(y<year)OC.pops=[];else if(y>year&&y-year<=3)for(let k=year+1;k<=y;k++)ocYearPops(k)}year=y;yr.value=y;document.getElementById('yrTxt').textContent=y;
   if(mode==="ocean"){document.getElementById('yrBox').classList.toggle('ghost',year>OC_NOW);document.getElementById('yrLbl').textContent=phaseOf(year)+(year>OC_NOW?"（推演）":"");return}
   const g=year>2020;document.getElementById('yrBox').classList.toggle('ghost',g);document.getElementById('yrLbl').textContent=g?"推演年（外推）":"高通優先權年";
   fish.forEach(f=>{if(f.who==="q"&&f.year===year&&!f.born){f.born=true;const V=VX.q,a=rnd()*6.28;f.x=V.x+Math.cos(a)*V.R*1.6;f.y=V.y+Math.sin(a)*V.R*1.4;setTimeout(()=>f.born=false,2600)}})}
@@ -586,15 +599,23 @@ cv.addEventListener('pointermove',e=>{if(mode==="net"||mode==="eco")return;
     if(bb){hover=bb;const B=bb.big,dead=ocDead(bb);const pl=B.pool==="hevc"?"HEVC 池 被引用第 "+B.rank+" 名":B.pool==="vvc"?"VVC 池 被引用第 "+B.rank+" 名":"高通 · 撒網 vs 燈塔示範案";
       tip.innerHTML=`<b style="font-family:var(--f-mono)">${esc(B.no)}</b><br>${esc(pl)}<br>權利人：${esc(B.own)}<br>被引用 <b>${B.cites}</b> 次${B.yr?" · 申請 "+esc(B.yr):""}<br>${esc(B.sum)}${B.pool!=="q"?"<br>"+(dead?"已屆 20 年，到期":"仍在有效期"):""}<br><span style="color:var(--dim)">出處：${B.pool==="q"?"Google Patents":"期末報告表 "+(B.pool==="hevc"?"11":"13")}</span>`;
       tip.hidden=false;tip.style.left=Math.min(e.clientX+14,W-290)+'px';tip.style.top=(e.clientY+14)+'px';return}}
-  let best=null,bd=144;for(const f of (mode==="ocean"?OC.fish:fish)){if(f.alpha<.35||f.big||(f.who==="o"&&mode!=="ocean"))continue;const dx=f.x-e.clientX,dy=f.y-e.clientY,d=dx*dx+dy*dy;if(d<bd){bd=d;best=f}}
+  let best=null,bd=144;for(const f of (mode==="ocean"?OC.fish:fish)){if(f.alpha<.35||(mode==="ocean"&&f.big))continue;const dx=f.x-e.clientX,dy=f.y-e.clientY,d=dx*dx+dy*dy;if(d<bd){bd=d;best=f}}
   hover=best;if(!best){tip.hidden=true;return}
   if(mode==="ocean"&&best.who!=="q"){const nm={a:"H.264 池（示意）",s:"Samsung · HEVC 池",o:"其他權利人 · HEVC 池",v:esc(best.vk||"")+" · VVC 池"}[best.who];
     const per=best.who==="v"?"1 條＝4 件":best.who==="a"?"示意個體":"1 條＝8 件";
     tip.innerHTML=`<b>${nm}</b>${COLORBY==="geo"&&best.geo?" · "+best.geo:""}<br>申請年約 ${Math.floor(best.fy)} · ${per}${ocDead(best)?"<br>已屆 20 年，到期":"<br>到期年約 "+Math.floor(best.fy+20)}${best.who==="v"&&best.early?"<br>HEVC 世代申請，2018 起流入 VVC":""}`;
     tip.hidden=false;tip.style.left=Math.min(e.clientX+14,W-250)+'px';tip.style.top=(e.clientY+14)+'px';return}
+  if(best.big){const B=best.big;tip.innerHTML=`<b style="font-family:var(--f-mono)">${esc(B.no)}</b><br>${B.pool==="hevc"?"HEVC 池 被引用第 "+B.rank+" 名":"高通 · 撒網 vs 燈塔示範案"}<br>權利人：${esc(B.own)}<br>被引用 <b>${B.cites}</b> 次${B.yr?" · 申請 "+esc(B.yr):""}<br>${esc(B.sum)}<br><span style="color:var(--dim)">出處：${B.pool==="q"?"Google Patents":"期末報告表 11"}</span>`;
+    tip.hidden=false;tip.style.left=Math.min(e.clientX+14,W-290)+'px';tip.style.top=(e.clientY+14)+'px';return}
+  if(!best.ghost&&best.who!=="n"){const mono=t=>`<span style="font-family:var(--f-mono);color:var(--gold)">${esc(t)}</span>`;let h;
+    if(best.who==="q"){const A=ARMS.find(a=>a[0]===best.arm);h=`<b>高通 · ${esc(A[0]+" "+A[1])}</b><br>本群 ${A[2].toLocaleString()} 族（3,044 族中）${best.geo?" · 公告國 "+best.geo:""}<br>已知公告號：${mono("US 2014/0286413 A1")}（被引 88，Abandoned）`}
+    else if(best.who==="s")h=`<b>Samsung · HEVC 池</b><br>池內第一，2,381 件（17.6%）<br>期末報告未列三星個別公告號`;
+    else h=`<b>其他池內權利人 · HEVC 池</b><br>11,125 件 · 1 條＝8 件<br>已知高被引：${mono("US 6728317 B1")}（杜比 880）、${mono("US 7266150 B2")}（杜比 513）、${mono("US 7003035 B2")}（微軟 374）`;
+    if(mode==="saturn"&&best.role)h+=`<br>${{core:"核心球體",A:"外環 A",B:"衛星環 B",noise:"雜訊"}[best.role]}${best.multi?" · 被 2+ 個 Unit 涵蓋":""}`;
+    tip.innerHTML=h+`<br><span style="color:var(--dim)">金色大魚＝報告中有公告號的專利，滑鼠移上可看</span>`;tip.hidden=false;tip.style.left=Math.min(e.clientX+14,W-290)+'px';tip.style.top=(e.clientY+14)+'px';return}
   const who=best.who==="q"?"Qualcomm":best.who==="s"?"Samsung":best.who==="n"?"關鍵字雜訊（非 SEP）":"其他";
   const role=mode==="saturn"&&best.role?({core:"核心球體",A:"外環 A",B:"衛星環 B",noise:"雜訊"}[best.role]+(best.multi?" · 被 2+ 個 Unit 涵蓋":"")):"";
-  tip.innerHTML=`<b>${best.ghost?"推演家族":"模擬家族"}</b> · ${who}${best.year?" · "+best.year:""}${best.geo?" · "+best.geo:""}<br>${best.arm?esc(best.arm+" "+ARM_SECT[best.arm].label)+"<br>":""}${best.ghost?"外推年份新家族":"被引 "+best.cites+" 次"}${best.star?"<br>"+best.star:""}${role?"<br>"+role:""}`;
+  tip.innerHTML=`<b>${best.ghost?"推演家族（外推）":"關鍵字雜訊"}</b> · ${who}${best.year?" · "+best.year:""}${best.geo?" · "+best.geo:""}<br>${best.arm?esc(best.arm+" "+ARM_SECT[best.arm].label)+"<br>":""}${best.ghost?"外推年份新家族":"被引 "+best.cites+" 次"}${best.star?"<br>"+best.star:""}${role?"<br>"+role:""}`;
   tip.hidden=false;tip.style.left=Math.min(e.clientX+14,W-250)+'px';tip.style.top=(e.clientY+14)+'px'});
 cv.addEventListener('pointerleave',()=>{hover=null;tip.hidden=true});
 
@@ -937,16 +958,18 @@ function ocFrame(t,now){
   ctx.globalCompositeOperation="lighter";ctx.drawImage(trail,0,0,W,H);ctx.globalCompositeOperation="source-over";
   ctx.globalAlpha=.45;ctx.fillStyle="#56697a";ctx.beginPath();for(const f of OC.fish)if(f.died&&!f.big&&f.alpha>.03)fishPath(f,1.9);ctx.fill();ctx.globalAlpha=1;
   // 名魚：報告中被引用前 10 名（大魚、金邊；到期後變灰但仍保留大小）
-  for(const f of OC.fish){if(!f.big||f.alpha<.05)continue;const B=f.big,sz=6.5+Math.sqrt(B.cites)/3.6,dead=f.died;
-    ctx.globalAlpha=Math.min(1,f.alpha/(dead?.4:1));
-    const br=.5+.5*Math.sin(now*.0028+B.rank*1.7);
-    if(!dead){const hr=sz*(2.6+1.1*br),gl=ctx.createRadialGradient(f.x,f.y,0,f.x,f.y,hr);gl.addColorStop(0,`rgba(255,209,102,${.32+.22*br})`);gl.addColorStop(1,"rgba(255,209,102,0)");ctx.fillStyle=gl;ctx.beginPath();ctx.arc(f.x,f.y,hr,0,6.28);ctx.fill();
-      ctx.strokeStyle=`rgba(255,209,102,${.55*(1-br)})`;ctx.lineWidth=1;ctx.beginPath();ctx.arc(f.x,f.y,sz*(1.6+2.2*br),0,6.28);ctx.stroke()}
-    ctx.beginPath();fishPath(f,sz);ctx.fillStyle=dead?"#b8ab80":B.pool==="vvc"?"#ffc6f0":B.pool==="q"?"#00e5ff":"#ffd166";ctx.fill();
-    ctx.lineWidth=2;ctx.strokeStyle=dead?"rgba(255,209,102,.8)":"#fff";if(dead)ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
-    if(W>=860){const ax=f.x+sz*1.2,ay=f.y-sz*1.2,bx=ax+14,by=ay-12;ctx.strokeStyle=dead?"rgba(255,209,102,.35)":"rgba(255,209,102,.8)";ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(bx+46,by);ctx.stroke();
-      ctx.font="500 9px 'IBM Plex Mono',monospace";ctx.textAlign="left";ctx.fillStyle=dead?"rgba(228,241,247,.5)":"#ffe6a8";
-      ctx.fillText((B.pool==="q"?"QCOM":B.pool==="vvc"?"VVC #"+B.rank:"HEVC #"+B.rank)+" · "+B.cites,bx+2,by-3)}}
+  for(const f of OC.fish){if(!f.big||f.alpha<.05)continue;const B=f.big,dead=f.died;
+    // 名魚：和一般魚同造型，只略大；活著時炫目發光，到期後轉為淡金
+    const sz=4.4+Math.min(2,Math.sqrt(B.cites)/15),br=.5+.5*Math.sin(now*.0032+B.rank*1.7);
+    const hue=B.pool==="vvc"?["#ff9cf2","#ffd6fb"]:B.pool==="q"?["#22e3ff","#c9fbff"]:["#ffd166","#fff1c2"];
+    ctx.globalAlpha=Math.min(1,f.alpha/(dead?.4:1))*(dead?.75:1);
+    if(!dead){ctx.strokeStyle=hue[0];ctx.globalAlpha=.6*(1-br);ctx.lineWidth=1;ctx.beginPath();ctx.arc(f.x,f.y,sz*(1.4+2.6*br),0,6.28);ctx.stroke();ctx.globalAlpha=1}
+    ctx.save();if(!dead){ctx.shadowColor=hue[0];ctx.shadowBlur=16+12*br}else{ctx.shadowColor="#ffd166";ctx.shadowBlur=4}
+    ctx.beginPath();fishPath(f,sz);ctx.fillStyle=dead?"#a99a6a":hue[0];ctx.fill();ctx.restore();
+    if(!dead){ctx.globalAlpha=.85;ctx.beginPath();fishPath(f,sz*.55);ctx.fillStyle=hue[1];ctx.fill();ctx.globalAlpha=1}
+    if(W>=860){const ax=f.x+sz*1.4,ay=f.y-sz*1.4,bx=ax+12,by=ay-10;ctx.globalAlpha=dead?.45:1;ctx.strokeStyle=hue[0];ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(bx+44,by);ctx.stroke();
+      ctx.font="500 9px 'IBM Plex Mono',monospace";ctx.textAlign="left";ctx.fillStyle=dead?"#c9c0a0":hue[1];
+      ctx.fillText((B.pool==="q"?"QCOM":B.pool==="vvc"?"VVC #"+B.rank:"HEVC #"+B.rank)+" · "+B.cites,bx+2,by-3);ctx.globalAlpha=1}}
   ctx.globalAlpha=1;
   // 出生閃光（白）與到期閃光（紅灰）：年代切換時看得到增減
   for(const f of OC.fish){if(!f.flash)continue;const a=Math.abs(f.flash);if(a<.03){f.flash=0;continue}
@@ -1059,6 +1082,8 @@ function ecoFrame(t,dt){
   b.onclick=()=>{const open=el.classList.toggle('folded');b.setAttribute('aria-expanded',String(!open))};el.appendChild(b);el.appendChild(body);el.classList.add('folded')});
 
 
+{const os=fish.filter(f=>f.who==="o"&&f.r0>.25&&f.r0<.8);STARS.filter(x=>x[0]==="hevc").forEach((x,i)=>{const f=os[i*37%os.length];f.big={pool:"hevc",rank:x[1],no:x[2],own:x[3],cites:x[4],yr:x[6],sum:x[7]};f.cites=x[4]});
+ const q=qFish.find(f=>f.year===2014&&!f.star&&f.r0>.3),x=STARS.find(x=>x[0]==="q");if(q){q.big={pool:"q",rank:0,no:x[2],own:x[3],cites:x[4],yr:x[6],sum:x[7]};q.cites=88}}
 addEventListener('resize',resize);resize();setColorBy('arm');setMode('ocean');setYear(OC_NOW);
 fish.forEach(f=>{const p=target(f,0);f.x=p[0]+(rnd()-.5)*40;f.y=p[1]+(rnd()-.5)*40});
 requestAnimationFrame(frame);

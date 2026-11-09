@@ -424,11 +424,57 @@ function drawVortexBg(t){
   const V=VX.q;ctx.font="500 11px 'Noto Sans TC',sans-serif";ctx.textAlign="center";
   ARMS.forEach(([k,,cnt])=>{if(cnt<50)return;const s=ARM_SECT[k],a=(s.a0+s.a1)/2+Math.log(1.02)*1.25+t*.00018;const r=V.R*1.08;
     const x=V.x+Math.cos(a)*r,y=V.y+Math.sin(a)*r*.86;ctx.fillStyle="rgba(4,11,22,.7)";const lab=ARM_SHORT[k]||k;const w=ctx.measureText(lab).width+10;ctx.fillRect(x-w/2,y-9,w,16);ctx.fillStyle="#cfe9ff";ctx.fillText(lab,x,y+3)})}
+/* ======== 土星錨點：宇宙背景（預先繪製星場＋星雲＋銀河帶＋遠方巨行星；每幀只做視差、閃爍、流星、環面塵埃） ======== */
+const COS={cv:document.createElement('canvas'),w:0,h:0,tw:[],dust:[],met:null,nextMet:0};
+function cosmosBuild(){const c=COS.cv,pad=60;c.width=(W+pad*2)*DPR;c.height=(H+pad*2)*DPR;const g=c.getContext('2d');g.setTransform(DPR,0,0,DPR,0,0);
+  const w=W+pad*2,h=H+pad*2,R=(a,b)=>a+Math.random()*(b-a);
+  g.fillStyle="#02060f";g.fillRect(0,0,w,h);
+  // 星雲（冷色、低飽和）
+  [[.18,.28,.55,"70,62,190",.20],[.82,.72,.5,"18,110,160",.14],[.62,.18,.35,"120,60,170",.08],[.3,.85,.4,"30,70,150",.10]].forEach(([x,y,r,c,a])=>{
+    const gr=g.createRadialGradient(w*x,h*y,0,w*x,h*y,Math.max(w,h)*r);gr.addColorStop(0,`rgba(${c},${a})`);gr.addColorStop(.5,`rgba(${c},${a*.35})`);gr.addColorStop(1,`rgba(${c},0)`);g.fillStyle=gr;g.fillRect(0,0,w,h)});
+  // 銀河帶（斜向）
+  g.save();g.translate(w/2,h/2);g.rotate(-.42);
+  const band=g.createLinearGradient(0,-h*.22,0,h*.22);band.addColorStop(0,"rgba(150,170,230,0)");band.addColorStop(.5,"rgba(150,170,230,.07)");band.addColorStop(1,"rgba(150,170,230,0)");g.fillStyle=band;g.fillRect(-w,-h*.22,w*2,h*.44);
+  for(let i=0;i<2600;i++){const gx=R(-w,w),gy=(Math.random()+Math.random()+Math.random()-1.5)*h*.12;g.globalAlpha=R(.08,.45);g.fillStyle=Math.random()<.8?"#cfdcff":"#ffe9d6";g.fillRect(gx,gy,R(.4,1.1),R(.4,1.1))}
+  g.restore();g.globalAlpha=1;
+  // 背景星場
+  for(let i=0;i<1500;i++){const s=Math.pow(Math.random(),3)*1.6+.3;g.globalAlpha=R(.15,.85);g.fillStyle=["#ffffff","#d8e4ff","#bcd2ff","#ffeedd"][Math.floor(Math.random()*4)];g.beginPath();g.arc(R(0,w),R(0,h),s*.6,0,6.283);g.fill()}
+  g.globalAlpha=1;
+  // 遠方巨行星（右下，只露出被照亮的弧邊）
+  const pr=Math.min(w,h)*.42,px=w*.98,py=h*1.08;const body=g.createRadialGradient(px-pr*.35,py-pr*.45,pr*.1,px,py,pr);
+  body.addColorStop(0,"rgba(60,70,140,.55)");body.addColorStop(.7,"rgba(18,22,52,.9)");body.addColorStop(1,"rgba(6,9,22,1)");g.fillStyle=body;g.beginPath();g.arc(px,py,pr,0,6.283);g.fill();
+  g.strokeStyle="rgba(150,175,255,.35)";g.lineWidth=2;g.beginPath();g.arc(px,py,pr,Math.PI*1.08,Math.PI*1.55);g.stroke();
+  const atm=g.createRadialGradient(px,py,pr,px,py,pr*1.12);atm.addColorStop(0,"rgba(120,150,255,.18)");atm.addColorStop(1,"rgba(120,150,255,0)");g.fillStyle=atm;g.beginPath();g.arc(px,py,pr*1.12,0,6.283);g.fill();
+  // 會閃爍的亮星
+  COS.tw=[];for(let i=0;i<46;i++)COS.tw.push({x:Math.random(),y:Math.random(),s:R(.8,1.8),ph:Math.random()*6.28,sp:R(.6,1.6)});
+  // 環面塵埃
+  COS.dust=[];for(let i=0;i<900;i++)COS.dust.push({k:1.25+Math.pow(Math.random(),.8)*1.6,a:Math.random()*6.283,sp:R(.6,1.2),s:R(.4,1.1),o:R(.15,.55)});
+  COS.w=W;COS.h=H;COS.pad=pad}
+function drawCosmos(t,now){if(COS.w!==W||COS.h!==H)cosmosBuild();const pad=COS.pad;
+  // 緩慢視差漂移：像鏡頭在太空中呼吸
+  const dx=Math.sin(t*.000045)*pad*.6,dy=Math.cos(t*.00003)*pad*.4;ctx.drawImage(COS.cv,-pad+dx,-pad+dy,W+pad*2,H+pad*2);
+  for(const s of COS.tw){const a=.35+.65*Math.max(0,Math.sin(now*.0016*s.sp+s.ph));const x=s.x*W+dx*.6,y=s.y*H+dy*.6,r=s.s*(1+a);
+    ctx.globalAlpha=a*.85;ctx.fillStyle="#eef4ff";ctx.beginPath();ctx.arc(x,y,r*.7,0,6.283);ctx.fill();
+    ctx.globalAlpha=a*.35;ctx.fillRect(x-r*4,y-.4,r*8,.8);ctx.fillRect(x-.4,y-r*4,.8,r*8)}
+  ctx.globalAlpha=1;
+  // 流星（約每 6–9 秒一顆）
+  if(!COS.met&&now>COS.nextMet){const a=.5+Math.random()*.35;COS.met={x:Math.random()*W*.8,y:Math.random()*H*.35,a,t0:now,len:120+Math.random()*120}}
+  if(COS.met){const m=COS.met,k=(now-m.t0)/900;if(k>1){COS.met=null;COS.nextMet=now+6000+Math.random()*3000}else{
+    const hx=m.x+Math.cos(m.a)*k*W*.35,hy=m.y+Math.sin(m.a)*k*W*.35,tx=hx-Math.cos(m.a)*m.len,ty=hy-Math.sin(m.a)*m.len;
+    const lg=ctx.createLinearGradient(tx,ty,hx,hy);lg.addColorStop(0,"rgba(220,235,255,0)");lg.addColorStop(1,`rgba(235,245,255,${.8*(1-k)})`);ctx.strokeStyle=lg;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(hx,hy);ctx.stroke()}}}
+function drawRingDust(t,front){const R=SAT.R;ctx.fillStyle="#d7e6ff";
+  for(const d of COS.dust){const a=d.a+t*.00009*d.sp/d.k;const z=Math.sin(a);if((z>=0)!==front)continue;
+    const x=SAT.x+Math.cos(a)*R*d.k,y=SAT.y+Math.sin(a)*R*d.k*.27-Math.cos(a)*R*d.k*.06;ctx.globalAlpha=d.o*(front?1:.5);ctx.fillRect(x,y,d.s,d.s)}
+  ctx.globalAlpha=1}
 function drawSaturnBg(){
   const R=SAT.R;ctx.strokeStyle="rgba(159,216,255,.18)";ctx.lineWidth=1;
   [[1.65,"衛星環 B · 引用網絡"],[2.35,"外環 A · JCT-VC 提案人"]].forEach(([k,l])=>{ctx.beginPath();ctx.ellipse(SAT.x,SAT.y,R*k,R*k*.27,-.06,0,6.28);ctx.stroke();
     if(phase>=3){ctx.font="500 11px 'Noto Sans TC',sans-serif";ctx.fillStyle="#9fb6c2";ctx.textAlign="left";ctx.fillText(l,SAT.x+R*k*.72,SAT.y+R*k*.27*.75+14)}});
-  const g=ctx.createRadialGradient(SAT.x,SAT.y,0,SAT.x,SAT.y,R*1.3);g.addColorStop(0,"rgba(79,179,255,.22)");g.addColorStop(1,"rgba(79,179,255,0)");ctx.fillStyle=g;ctx.beginPath();ctx.arc(SAT.x,SAT.y,R*1.3,0,6.28);ctx.fill();
+  // 環面輝光
+  ctx.save();ctx.translate(SAT.x,SAT.y);ctx.rotate(-.06);ctx.scale(1,.27);const rg=ctx.createRadialGradient(0,0,R*1.2,0,0,R*2.8);rg.addColorStop(0,"rgba(120,170,255,0)");rg.addColorStop(.35,"rgba(120,170,255,.07)");rg.addColorStop(.7,"rgba(150,140,255,.05)");rg.addColorStop(1,"rgba(150,140,255,0)");ctx.fillStyle=rg;ctx.beginPath();ctx.arc(0,0,R*2.8,0,6.28);ctx.fill();ctx.restore();
+  // 核心大氣層：外圈冷光暈＋受光面
+  const g0=ctx.createRadialGradient(SAT.x,SAT.y,R*.6,SAT.x,SAT.y,R*3.2);g0.addColorStop(0,"rgba(60,140,255,.12)");g0.addColorStop(1,"rgba(60,140,255,0)");ctx.fillStyle=g0;ctx.beginPath();ctx.arc(SAT.x,SAT.y,R*3.2,0,6.28);ctx.fill();
+  const g=ctx.createRadialGradient(SAT.x-R*.35,SAT.y-R*.4,0,SAT.x,SAT.y,R*1.3);g.addColorStop(0,"rgba(140,210,255,.3)");g.addColorStop(.6,"rgba(79,179,255,.12)");g.addColorStop(1,"rgba(79,179,255,0)");ctx.fillStyle=g;ctx.beginPath();ctx.arc(SAT.x,SAT.y,R*1.3,0,6.28);ctx.fill();
   const n=fish.filter(f=>vis(f)&&f.who==="q").length+fish.filter(f=>vis(f)&&f.who==="n").length;
   label(SAT.x,SAT.y-R*(phase===0?2.1:1.45)-14,PHASES[phase][1],n.toLocaleString()+" 條",COL.q)}
 function label(x,y,title,sub,col){ // 儀器標籤：細框、角刻、主標題＋寬距等寬副標
@@ -455,12 +501,13 @@ function frame(now){
   if(mode==="eco"){ECO.tt+=dtt*sp;ecoFrame(ECO.tt,dtt*sp);requestAnimationFrame(frame);return}
   simT+=dtt*sp;const t=simT;step(t);
   ctx.fillStyle="#050c18";ctx.fillRect(0,0,W,H);
-  if(mode==="vortex")drawVortexBg(t);else drawSaturnBg();
+  if(mode==="vortex")drawVortexBg(t);else{drawCosmos(t,now);drawRingDust(t,false);drawSaturnBg();}
   fadeTrail();ctx=trx;ctx.globalCompositeOperation="lighter";
   if(mode==="vortex")drawStreams(t);
   if(mode==="saturn"){const back=[],front=[];for(const f of fish)((f.z??0)<0?back:front).push(f);drawBatch(back,.55);drawBatch(front,1)}
   else drawBatch(fish,1);
   ctx.globalCompositeOperation="source-over";ctx=MAIN;ctx.globalCompositeOperation="lighter";ctx.drawImage(trail,0,0,W,H);ctx.globalCompositeOperation="source-over";
+  if(mode==="saturn")drawRingDust(t,true);
   // star family
   const st=qFish[0];if(st.alpha>.3){ctx.strokeStyle=COL.gold;ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(st.x,st.y,9+Math.sin(now*.004)*2,0,6.28);ctx.stroke()}
   if(caseFish&&mode==="vortex"){ctx.save();ctx.shadowColor="#fff";ctx.shadowBlur=16;ctx.fillStyle="#fff";ctx.beginPath();fishPath(caseFish,6);ctx.fill();ctx.restore();

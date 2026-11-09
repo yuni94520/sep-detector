@@ -46,6 +46,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
 .yr small{display:block;font-size:.58rem;color:var(--dim);letter-spacing:.12em;margin-top:3px}
 .yr.ghost{color:var(--gold)}
 .clock input{flex:1;min-width:0;accent-color:var(--sonar)}
+#cbLeg .geoT{width:100%;border-collapse:collapse;font-size:.7rem;font-variant-numeric:tabular-nums}#cbLeg .geoT th{color:var(--dim);font-weight:500;text-align:right;padding:2px 3px}#cbLeg .geoT td{text-align:right;padding:2px 3px;color:#cfe0e8}#cbLeg .geoT td:first-child{text-align:left}#cbLeg .geoT i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
 #ledger{left:max(16px,env(safe-area-inset-left,0px));top:calc(84px + env(safe-area-inset-top,0px));width:250px;max-height:calc(100% - 180px);overflow:auto;padding:12px 13px}
 #desk{right:max(16px,env(safe-area-inset-right,0px));top:calc(84px + env(safe-area-inset-top,0px));width:300px;max-height:calc(100% - 180px);overflow:auto;padding:12px 13px}
 h2{margin:0 0 8px;font-size:.66rem;letter-spacing:.14em;color:var(--dim);font-weight:700}
@@ -168,7 +169,7 @@ textarea{width:100%;min-height:110px;resize:vertical;box-sizing:border-box;backg
 
 <aside class="hud" id="desk">
   <div id="colorBy">
-    <h2>高通魚的顏色</h2>
+    <h2>魚的顏色</h2>
     <div class="tabs" role="group" aria-label="上色方式"><button type="button" data-c="arm" aria-pressed="true">Unit 章節</button><button type="button" data-c="geo" aria-pressed="false">公告國家</button><button type="button" data-c="cite" aria-pressed="false">被引用</button></div>
     <div id="cbLeg" style="margin-top:8px"></div>
   </div>
@@ -231,7 +232,10 @@ const ARMS=[ // 期末報告：各技術章節首次貢獻的唯一專利數（�
 const ARM_SHORT={"6B":"Slice/CU","PNS":"PNS 種子","2B":"AMVP","7A":"POC+RPS","2B_v1":"AMVP 原版","2A":"Merge"};
 // 公告國家（儀表板圖三，依 Publication Number 前綴；TOP10 以外合併）
 const GEO=[["US",585,"#3fa9e6"],["WO",445,"#a07bff"],["CN",355,"#3fc29a"],["TW",170,"#ffb347"],["EP",62,"#ff5f87"],["BR",38,"#6f95ff"],["JP",35,"#ff8a4c"],["AU",27,"#9ccc4a"],["KR",22,"#ff6fc0"],["CA",17,"#4cc9d8"],["其他",1288,"#4d6578"]];
-const GEO_COL=Object.fromEntries(GEO.map(g=>[g[0],g[2]]));
+const GEO_COL=Object.assign(Object.fromEntries(GEO.map(g=>[g[0],g[2]])),{MX:"#d6e05a",ES:"#e07a5f",IN:"#81b29a",HK:"#f2cc8f"});
+// HEVC 池國家占比（期末報告：美 23.2%、中 14.3%、韓 12.5%、日 10.2%）；VVC 池依 VVC 專利池儀表板（清洗前 3,742 件）公告國家分布
+const HEVC_GEO=[["US",23.2],["CN",14.3],["KR",12.5],["JP",10.2],["其他",39.8]];
+const VVC_GEO=[["US",1257],["CN",1170],["JP",560],["AU",120],["BR",113],["MX",101],["CA",96],["ES",78],["IN",61],["HK",41],["其他",145]];
 const CITE_COL=c=>c>=51?"#ffd166":c>=31?"#ff8a4c":c>=11?"#3fa9e6":"#2b5d86";
 let COLORBY="arm";
 const KW_LABEL={"6B":"§7.3.6-8 Slice/CU","2B":"§8.5.3 AMVP","7A":"§8.1-8.3 POC+RPS","2A":"§8.5.3 Merge","1A":"§8.4.1-3 量化參數"};
@@ -453,7 +457,7 @@ function setMode(m){mode=m;document.getElementById('mEco').setAttribute('aria-pr
   if(timer){clearInterval(timer);timer=null}
   const [y0,y1]=m==="ocean"?[OC_Y0,OC_Y1]:[2008,2023];yr.min=y0;yr.max=y1;play.textContent=`▶ 播放 ${y0}→${y1}`;
   if(m==="ocean"||m==="vortex")setYear(Math.max(y0,Math.min(y1,year)));
-  document.getElementById('colorBy').hidden=!(m==="ocean"||m==="vortex");
+  document.getElementById('colorBy').hidden=!(m==="ocean"||m==="vortex");if(typeof setColorBy==="function"&&document.getElementById('cbLeg'))setColorBy(COLORBY);
   if(m==="net"){hover=null;tip.hidden=true;netStart(NET.step)}
   if(m==="eco"){hover=null;tip.hidden=true;ecoStart(ECO.step)}}
 document.getElementById('mVortex').onclick=()=>setMode("vortex");document.getElementById('mSaturn').onclick=()=>setMode("saturn");
@@ -474,6 +478,9 @@ play.onclick=()=>{if(timer){clearInterval(timer);timer=null;play.textContent=pla
 /* color-by toggle */
 const CB_LEG={arm:()=>ARMS.map(([k,l,c])=>[`${k} ${l}`,ARM_COL[k],c]),geo:()=>GEO.map(([k,n,c])=>[k,c,n]),cite:()=>[["被引 51+（核心 152）","#ffd166",152],["31–50","#ff8a4c",411],["11–30","#3fa9e6",932],["1–10","#2b5d86",1549]]};
 function setColorBy(k){COLORBY=k;document.querySelectorAll('#colorBy button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.c===k));
+  if(k==="geo"&&mode==="ocean"){const pct=(T,c)=>{const t=T.reduce((a,b)=>a+b[1],0),r=T.find(x=>x[0]===c);return r?Math.round(r[1]/t*1000)/10+"%":"—"};
+    const cs=["US","CN","JP","KR","TW","WO","其他"];
+    document.getElementById('cbLeg').innerHTML='<table class="geoT"><tr><th></th><th>高通</th><th>HEVC 池</th><th>VVC 池</th></tr>'+cs.map(c=>`<tr><td><i style="background:${GEO_COL[c]}"></i>${c}</td><td>${pct(GEO,c)}</td><td>${pct(HEVC_GEO,c)}</td><td>${pct(VVC_GEO,c)}</td></tr>`).join('')+'</table><p class="note">「其他」各池定義不同：高通含 TOP10 以外國家；HEVC 池為美中韓日以外；VVC 池為 TOP10 以外。VVC 依 VVC 專利池儀表板（清洗前 3,742 件）比例。</p>';return}
   document.getElementById('cbLeg').innerHTML=CB_LEG[k]().map(([t,c,n])=>`<div class="key"><i style="background:${c}"></i><span>${esc(t)}</span><em>${n.toLocaleString()}</em></div>`).join('')}
 document.querySelectorAll('#colorBy button').forEach(b=>b.onclick=()=>setColorBy(b.dataset.c));
 document.getElementById('geoKeys').innerHTML=GEO.map(([k,n,c])=>`<div class="key"><i style="background:${c}"></i><span>${k}</span><em>${n.toLocaleString()}</em></div>`).join('');
@@ -497,7 +504,7 @@ cv.addEventListener('pointermove',e=>{if(mode==="net"||mode==="eco")return;let b
   hover=best;if(!best){tip.hidden=true;return}
   if(mode==="ocean"&&best.who!=="q"){const nm={a:"H.264 池（示意）",s:"Samsung · HEVC 池",o:"其他權利人 · HEVC 池",v:esc(best.vk||"")+" · VVC 池"}[best.who];
     const per=best.who==="v"?"1 條＝4 件":best.who==="a"?"示意個體":"1 條＝8 件";
-    tip.innerHTML=`<b>${nm}</b><br>申請年約 ${Math.floor(best.fy)} · ${per}${ocDead(best)?"<br>已屆 20 年，到期":"<br>到期年約 "+Math.floor(best.fy+20)}${best.who==="v"&&best.early?"<br>HEVC 世代申請，2018 起流入 VVC":""}`;
+    tip.innerHTML=`<b>${nm}</b>${COLORBY==="geo"&&best.geo?" · "+best.geo:""}<br>申請年約 ${Math.floor(best.fy)} · ${per}${ocDead(best)?"<br>已屆 20 年，到期":"<br>到期年約 "+Math.floor(best.fy+20)}${best.who==="v"&&best.early?"<br>HEVC 世代申請，2018 起流入 VVC":""}`;
     tip.hidden=false;tip.style.left=Math.min(e.clientX+14,W-250)+'px';tip.style.top=(e.clientY+14)+'px';return}
   const who=best.who==="q"?"Qualcomm":best.who==="s"?"Samsung":best.who==="n"?"關鍵字雜訊（非 SEP）":"其他";
   const role=mode==="saturn"&&best.role?({core:"核心球體",A:"外環 A",B:"衛星環 B",noise:"雜訊"}[best.role]+(best.multi?" · 被 2+ 個 Unit 涵蓋":"")):"";
@@ -662,10 +669,10 @@ function ocBuild(){
   const as=[mkS("a","h264",42),mkS("a","h264",42)];
   Object.entries(AVC_FY).forEach(([y,n])=>{for(let i=0;i<n;i++)add({who:"a",fy:+y+rnd(),cites:citeSample(),school:as[i%2]})});
   const ss=[mkS("s","hevc",80),mkS("s","hevc",80),mkS("s","hevc",80)],os=[mkS("o","hevc",90),mkS("o","hevc",90),mkS("o","hevc",90),mkS("o","hevc",90)];
-  Object.entries(HEVC_FY).forEach(([y,n])=>{for(let i=0;i<Math.round(n/HEVC_PER);i++){const sam=rnd()<2381/13506;add({who:sam?"s":"o",fy:+y+rnd(),cites:citeSample(),school:sam?ss[i%3]:os[i%4]})}});
+  Object.entries(HEVC_FY).forEach(([y,n])=>{for(let i=0;i<Math.round(n/HEVC_PER);i++){const sam=rnd()<2381/13506;add({who:sam?"s":"o",geo:pickW(HEVC_GEO,g=>g[1])[0],fy:+y+rnd(),cites:citeSample(),school:sam?ss[i%3]:os[i%4]})}});
   const vwait=mkS("v","hevc",75,[.84,.62]),vs=[mkS("v","vvc",80),mkS("v","vvc",80),mkS("v","vvc",80)];
   Object.entries(VVC_FY).forEach(([y,n])=>{for(let i=0;i<Math.round(n/VVC_PER);i++){const own=pickW(VVC_OWN,o=>o[1]);const home=vs[i%3];
-    add({who:"v",vk:own[0],vcol:own[2],fy:+y+rnd(),cites:citeSample(),vhome:home,wait:vwait,early:+y<=2017,school:+y<=2017?vwait:home})}});
+    add({who:"v",vk:own[0],vcol:own[2],geo:pickW(VVC_GEO,g=>g[1])[0],fy:+y+rnd(),cites:citeSample(),vhome:home,wait:vwait,early:+y<=2017,school:+y<=2017?vwait:home})}});
   ARMS.forEach(([k])=>{OC.q[k]=mkS("q","hevc",55)});
   const qv=[mkS("q","vvc",70),mkS("q","vvc",70)];
   qFish.forEach(f=>add({who:"q",arm:f.arm,geo:f.geo,year:f.year,fy:f.year+rnd(),cites:f.cites,star:f.star,school:f.year>=2018?qv[f.jit<.5?0:1]:OC.q[f.arm],migr:f.year>=2018}));
@@ -673,7 +680,7 @@ function ocBuild(){
   OC.tr=[];for(let i=0;i<1700;i++)OC.tr.push({x:rnd()*W,y:TOPY()+rnd()*(BOTY()-TOPY()),life:rnd()*200});
   OC.built=true;OC.w=W;OC.h=H}
 const ocBorn=f=>OC.yf>=f.fy, ocDead=f=>!f.ghost&&OC.yf>=f.fy+20;
-function ocColor(f){if(ocDead(f))return "#4a5b69";if(f.who==="v")return f.vcol;if(f.who==="q")return qCol(f);if(f.who==="a")return "#46c3b4";
+function ocColor(f){if(ocDead(f))return "#4a5b69";if(COLORBY==="geo"&&f.who!=="a"&&f.who!=="q")return GEO_COL[f.geo]||"#4d6578";if(f.who==="v")return f.vcol;if(f.who==="q")return qCol(f);if(f.who==="a")return "#46c3b4";
   if(f.who==="s")return S_COLS[Math.floor(f.jit*S_COLS.length)];return O_COLS[Math.floor(f.jit*O_COLS.length)]}
 function ocCounts(){const c={hevcB:0,hevcD:0,vvcB:0,vvcD:0,avcB:0,avcD:0,q:0,qv:0};
   for(const f of OC.fish){if(!ocBorn(f))continue;const d=ocDead(f);
@@ -765,7 +772,8 @@ function ocFrame(t,now){
     label(x,top-4,o.name,sub,col)});
   // 線上的說明
   ctx.font="500 10px 'Noto Sans TC',sans-serif";ctx.textAlign="center";ctx.save();ctx.translate(wx-8,mid);ctx.rotate(-Math.PI/2);ctx.fillStyle="rgba(127,224,208,.9)";ctx.fillText("世代邊界：H.264 與 HEVC 專利不跨池",0,0);ctx.restore();
-  if(K>0){ctx.fillStyle="rgba(200,182,255,.95)";ctx.font="600 11px 'Noto Sans TC',sans-serif";ctx.fillText(K<1?"JVET 探索 →":"技術外溢 →",sx,mid-gap/2-6)}
+  if(K>0){ctx.fillStyle="rgba(200,182,255,.95)";ctx.font="600 11px 'Noto Sans TC',sans-serif";ctx.fillText(K<1?"JVET 探索 →":"技術外溢 →",sx,mid-gap/2-6);
+    if(K>=1&&W>=860){ctx.font="400 10px 'Noto Sans TC',sans-serif";ctx.fillStyle="rgba(255,138,138,.85)";ctx.fillText("三星、Sony、LG、Canon、微軟、華為",sx,mid+gap/2+14);ctx.fillText("尚未加入 VVC 池",sx,mid+gap/2+27)}}
   fadeTrail();ctx=trx;ctx.globalCompositeOperation="lighter";
   const byO=new Map();
   for(const p of OC.tr){const fl=flowAt(p.x,p.y,t);const ox=p.x;p.x+=fl[0]*1.5*SPEED;p.y+=fl[1]*1.5*SPEED;p.life-=1;

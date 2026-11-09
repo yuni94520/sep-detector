@@ -199,7 +199,7 @@ textarea{width:100%;min-height:110px;resize:vertical;box-sizing:border-box;backg
   <div class="ecoHead">
     <div class="phases ecoSteps" id="ecoSteps"></div>
     <div class="ecoBase"><span>驗證母數</span><div class="tabs" role="group" aria-label="驗證母數" id="ecoBase"></div>
-      <label class="perc" for="ecoPer">人工單件 $<input id="ecoPer" type="number" min="100" step="500" value="6000" inputmode="numeric"></label></div>
+      <label class="perc" for="ecoPer">人工單件 $<input id="ecoPer" type="number" min="100" step="500" value="10000" inputmode="numeric"></label></div>
   </div>
   <div class="ecoGrid">
     <div class="m"><span id="eTl">耗時</span><b id="eT">—</b><small id="eTs"></small></div>
@@ -430,7 +430,7 @@ function setPhase(i){phase=i;[...phBox.children].forEach((b,j)=>b.setAttribute('
 setPhase(4);
 document.getElementById('armKeys').innerHTML=ARMS.map(([k,l,c])=>`<div class="key"><i style="background:${ARM_COL[k]}"></i><span>${k} ${l}</span><em>~${c.toLocaleString()}</em></div>`).join('');
 function setMode(m){mode=m;document.getElementById('mEco').setAttribute('aria-pressed',m==="eco");document.getElementById('eco').hidden=m!=="eco";
-  document.getElementById('desk').hidden=m==="eco";document.getElementById('prov').textContent=m==="eco"?"效率數字依《SEP 必要性檢測系統》簡報、母數依期末報告；人工單件費用依使用者設定。魚為示意個體。":"模擬個體依簡報統計分布生成，非真實專利清單；匯入家族清單後可換成真實魚群。";
+  document.getElementById('desk').hidden=m==="eco";document.getElementById('prov').textContent=m==="eco"?"母數依期末報告；單件 US$10,000 依 TCL v. Ericsson 判決 p.30（Via Licensing）。魚為示意個體。":"模擬個體依簡報統計分布生成，非真實專利清單；匯入家族清單後可換成真實魚群。";
   document.getElementById('mOcean').setAttribute('aria-pressed',m==="ocean");document.getElementById('mVortex').setAttribute('aria-pressed',m==="vortex");document.getElementById('mSaturn').setAttribute('aria-pressed',m==="saturn");
   document.getElementById('mNet').setAttribute('aria-pressed',m==="net");document.getElementById('deskNet').hidden=m!=="net";
   document.getElementById('deskVortex').hidden=!(m==="vortex"||m==="ocean");document.getElementById('deskSaturn').hidden=m!=="saturn";
@@ -677,7 +677,7 @@ function ocFrame(t,now){
 /* ======== 經濟效益 ======== */
 // figures from 「SEP 必要性檢測系統」(2026.02) + 期末報告 (2026.10): manual 0.5 h/筆 applied to 43,095 筆 (=0.5 h/筆, ≈10 年); system 72 h; AI API bill $11,035 for 1.7 萬件 (≈$0.65/件);
 // backtest accuracy 89.2% (傳統 76%); precision 88%, F1 85.5%; reproducibility <30% → 100%. Per-SEP manual verification cost: user setting ($5,000).
-const ECO={step:0,tt:0,base:43095,per:6000,fish:[],floats:[],insp:null,done:0,built:false};
+const ECO={step:0,tt:0,base:43095,per:10000,fish:[],floats:[],insp:null,done:0,built:false};
 const BASES=[[3044,"高通 3,044"],[13506,"池內母數 13,506"],[43095,"原始池 43,095"]];
 const H_PER=0.5, H_YEAR=2102.4, AI_H=72, AI_PER=11035/17000, P=.88, F1=.855, REC=F1*P/(2*P-F1);
 const GOLD=2381, TP=Math.round(REC*GOLD), FN=GOLD-TP, FP=Math.round(TP*(1-P)/P);
@@ -699,7 +699,7 @@ function ecoStart(i){ECO.step=i;ECO.tt=0;ECO.done=0;ECO.floats=[];ECO.insp={x:W*
   document.getElementById('eBars').style.display=i===3?'grid':'none';const eg=document.querySelector('.ecoGrid');eg.style.display=i===3?'none':'grid';eg.classList.toggle('four',i===2);document.getElementById('eR').style.display=i===2?'block':'none';
   document.getElementById('poolCost').innerHTML=`<span>原始池 43,095 件全部以人工驗證</span><b>$${(43095*ECO.per).toLocaleString()}</b><span>43,095 件 × $${ECO.per.toLocaleString()} · ${Math.round(43095*H_PER).toLocaleString()} 小時（約 ${(43095*H_PER/H_YEAR).toFixed(1)} 年）</span>`;
   const N=ECO.base,mh=N*H_PER;
-  const notes=["一位專家一次看一件：每件約 0.5 小時、委外 $"+ECO.per.toLocaleString()+"。白點是已驗證的家族，飄起的金額是每一件的費用。照這個速度，"+N.toLocaleString()+" 件要 "+Math.round(mh).toLocaleString()+" 小時，約 "+(mh/H_YEAR).toFixed(1)+" 年。",
+  const notes=["一位專家一次看一件：每件約 0.5 小時，專利池等級驗證每件 $"+ECO.per.toLocaleString()+"（Via Licensing 收費，見 TCL v. Ericsson 判決）；法院案中的 Concur IP 快篩平均每件約 20 分鐘、$100，只算粗篩。白點是已驗證的家族，飄起的金額是每一件的費用。照這個速度，"+N.toLocaleString()+" 件要 "+Math.round(mh).toLocaleString()+" 小時，約 "+(mh/H_YEAR).toFixed(1)+" 年。",
     "語意向量＋8 維度評分的三階段漏斗一次掃過全池，聲納掃到的魚依必要性分數上色。瓶頸在資料清洗，不在算力，全池 72 小時完成。",
     "答案卷不用人工標註：直接拿專利池公告的三星 2,381 件 SEP 當黃金集。綠魚＝AI 判為 SEP 且在名單上，紅魚＝AI 判為 SEP 但不在名單上，暗金框＝名單上但 AI 漏掉。",
     "同一批專利，兩種做法的時間與費用。AI 費用為運算帳單換算；人工費用依你設定的單件金額。"];

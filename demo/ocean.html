@@ -35,6 +35,13 @@
 html,body{height:100%}
 body{margin:0;background:radial-gradient(120% 90% at 50% 0%,var(--abyss-2) 0%,var(--abyss) 62%);color:var(--ink);font-family:var(--f-body);overflow:hidden;-webkit-font-smoothing:antialiased}
 #sea{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#sea.grab{cursor:grabbing}
+#zoom{position:fixed;right:16px;bottom:14px;z-index:6;display:flex;align-items:center;gap:2px;padding:3px;border:1px solid rgba(120,200,230,.22);border-radius:999px;background:rgba(6,16,30,.72);backdrop-filter:blur(8px);font:500 11px 'IBM Plex Mono',monospace;color:#cfe3ea}
+#zoom button{all:unset;cursor:pointer;width:26px;height:26px;display:grid;place-items:center;border-radius:50%;font-size:14px;color:#cfe3ea}
+#zoom button:hover{background:rgba(120,200,230,.14)}#zoom button:focus-visible{outline:1px solid #7af0ff}
+#zoom #zmTxt{min-width:38px;text-align:center}#zoom em{font-style:normal;color:#7f97a3;font-size:10px;padding:0 10px 0 6px}
+#zoom[hidden]{display:none}#zoom.on{border-color:rgba(122,240,255,.5)}
+@media (max-width:860px){#zoom em{display:none}}
 /* HUD：深黑毛玻璃 + 1px 低透明發光邊 + 角落定位刻 */
 .hud{position:fixed;z-index:2;background:linear-gradient(180deg,rgba(10,22,40,.66),rgba(3,8,16,.72));border:1px solid var(--line);border-radius:12px;
   backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
@@ -246,6 +253,7 @@ textarea{width:100%;min-height:110px;resize:vertical;box-sizing:border-box;backg
 </section>
 <div class="hud" id="prov">模擬個體依簡報統計分布生成，非真實專利清單；匯入家族清單後可換成真實魚群。</div>
 <div id="tip" hidden></div>
+<div id="zoom" role="group" aria-label="鏡頭縮放"><button type="button" id="zmOut" aria-label="拉遠">−</button><span id="zmTxt">1.0×</span><button type="button" id="zmIn" aria-label="拉近">＋</button><button type="button" id="zmReset" aria-label="復位" title="復位（雙擊畫面或按 0）">⟲</button><em>滾輪縮放 · 拖曳平移</em></div>
 
 <script>
 /* ======== figures from 「給組長的高通名單」/「高通SEP清單、方法論」 ======== */
@@ -279,7 +287,7 @@ const pickW=(arr,wf)=>{const t=arr.reduce((s,a)=>s+wf(a),0);let r=rnd()*t;for(co
 /* ======== canvas ======== */
 const cv=document.getElementById('sea');let ctx=cv.getContext('2d');const MAIN=ctx;let W=0,H=0,DPR=1;
 const trail=document.createElement('canvas'),trx=trail.getContext('2d');let SPEED=2,simT=0,lastNow=0;
-function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;MAIN.setTransform(DPR,0,0,DPR,0,0);trail.width=W*DPR;trail.height=H*DPR;trx.setTransform(DPR,0,0,DPR,0,0);layout();const hb=document.getElementById('top').getBoundingClientRect().bottom;document.getElementById('ledger').style.top=(hb+8)+'px';if(W>=860)document.getElementById('desk').style.top=(hb+8)+'px';else document.getElementById('desk').style.top=''}
+function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;MAIN.setTransform(DPR,0,0,DPR,0,0);trail.width=W*DPR;trail.height=H*DPR;trx.setTransform(DPR,0,0,DPR,0,0);if(typeof CAM!=='undefined')camClamp();layout();const hb=document.getElementById('top').getBoundingClientRect().bottom;document.getElementById('ledger').style.top=(hb+8)+'px';if(W>=860)document.getElementById('desk').style.top=(hb+8)+'px';else document.getElementById('desk').style.top=''}
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ======== vortices ======== */
@@ -540,9 +548,22 @@ function drawStreams(t){const by=new Map();
     const a=p.arm/5*6.283+p.off+Math.log(.06+p.u)*1.4*(p.k==="o"?-1:1)+t*.00025*(p.k==="q"?.72:1);
     (by.get(p.col)||by.set(p.col,[]).get(p.col)).push([V.x+Math.cos(a)*r,V.y+Math.sin(a)*r*.86,1+(1-p.u)*1.4])}
   for(const[col,arr]of by){ctx.fillStyle=col;ctx.globalAlpha=.85;ctx.beginPath();arr.forEach(([x,y,z])=>{ctx.moveTo(x+z,y);ctx.arc(x,y,z,0,6.283)});ctx.fill()}ctx.globalAlpha=1}
+/* ======== camera：拉遠拉近（滾輪／拖曳／雙擊復位／觸控雙指） ======== */
+const CAM={s:1,x:0,y:0,ts:1,tx:0,ty:0,MIN:1,MAX:4};
+function camClamp(){CAM.ts=Math.max(CAM.MIN,Math.min(CAM.MAX,CAM.ts));CAM.tx=Math.min(0,Math.max(W-W*CAM.ts,CAM.tx));CAM.ty=Math.min(0,Math.max(H-H*CAM.ts,CAM.ty))}
+function camZoomAt(sx,sy,f){const wx=(sx-CAM.tx)/CAM.ts,wy=(sy-CAM.ty)/CAM.ts;CAM.ts*=f;CAM.ts=Math.max(CAM.MIN,Math.min(CAM.MAX,CAM.ts));CAM.tx=sx-wx*CAM.ts;CAM.ty=sy-wy*CAM.ts;camClamp()}
+function camReset(){CAM.ts=1;CAM.tx=0;CAM.ty=0}
+function camApply(dt){const k=reduce?1:1-Math.pow(.0005,dt/1000*2.2);CAM.s+=(CAM.ts-CAM.s)*k;CAM.x+=(CAM.tx-CAM.x)*k;CAM.y+=(CAM.ty-CAM.y)*k;
+  if(Math.abs(CAM.ts-CAM.s)<.0005){CAM.s=CAM.ts;CAM.x=CAM.tx;CAM.y=CAM.ty}
+  /* 限制實際鏡頭也不露出畫外 */
+  CAM.x=Math.min(0,Math.max(W-W*CAM.s,CAM.x));CAM.y=Math.min(0,Math.max(H-H*CAM.s,CAM.y));
+  const a=DPR*CAM.s;MAIN.setTransform(a,0,0,a,DPR*CAM.x,DPR*CAM.y);trx.setTransform(a,0,0,a,DPR*CAM.x,DPR*CAM.y);
+  const z=document.getElementById('zmTxt');if(z){const t=CAM.ts.toFixed(1)+"×";if(z.textContent!==t)z.textContent=t}
+  document.getElementById('zoom')?.classList.toggle('on',CAM.ts>1.01)}
+const toWorld=(cx,cy)=>[(cx-CAM.x)/CAM.s,(cy-CAM.y)/CAM.s];
 function hexA(h,a){const n=parseInt(h.slice(1),16);return `rgba(${n>>16},${n>>8&255},${n&255},${a})`}
 function frame(now){
-  const dtt=Math.min(50,now-(lastNow||now));lastNow=now;const sp=SPEED*(reduce?.3:1);
+  const dtt=Math.min(50,now-(lastNow||now));lastNow=now;const sp=SPEED*(reduce?.3:1);camApply(dtt);
   if(mode==="net"){NET.tt+=dtt*sp;netFrame(now);requestAnimationFrame(frame);return}
   if(mode==="ocean"){OC.tt+=dtt*sp;ocFrame(OC.tt,now);requestAnimationFrame(frame);return}
   if(mode==="eco"){ECO.tt+=dtt*sp;ecoFrame(ECO.tt,dtt*sp);requestAnimationFrame(frame);return}
@@ -553,7 +574,7 @@ function frame(now){
   if(mode==="vortex")drawStreams(t);
   if(mode==="saturn"){const back=[],front=[];for(const f of fish)((f.z??0)<0?back:front).push(f);drawBatch(back,.28);drawBatch(front,.62)}
   else drawBatch(fish,1);
-  ctx.globalCompositeOperation="source-over";ctx=MAIN;ctx.globalCompositeOperation="lighter";ctx.drawImage(trail,0,0,W,H);ctx.globalCompositeOperation="source-over";
+  ctx.globalCompositeOperation="source-over";ctx=MAIN;ctx.globalCompositeOperation="lighter";ctx.save();ctx.setTransform(DPR,0,0,DPR,0,0);ctx.drawImage(trail,0,0,W,H);ctx.restore();ctx.globalCompositeOperation="source-over";
   if(mode==="saturn"){drawRingDust(t,true);drawThalFront(t,now)}
   if(mode==="vortex")drawVortexWaves(t);
   for(const f of fish){if(!f.big||f.alpha<.3)continue;const B=f.big,sz=4.4+Math.min(2,Math.sqrt(B.cites)/15),br=.5+.5*Math.sin(now*.0032+B.rank*1.7),c=B.pool==="q"?["#22e3ff","#c9fbff"]:["#ffd166","#fff1c2"];
@@ -581,7 +602,7 @@ PHASES.forEach((p,i)=>{const b=document.createElement('button');b.type='button';
 function setPhase(i){phase=i;[...phBox.children].forEach((b,j)=>b.setAttribute('aria-pressed',j===i));document.getElementById('phaseNote').textContent=PHASES[i][3]}
 setPhase(4);
 document.getElementById('armKeys').innerHTML=ARMS.map(([k,l,c])=>`<div class="key"><i style="background:${ARM_COL[k]}"></i><span>${k} ${l}</span><em>~${c.toLocaleString()}</em></div>`).join('');
-function setMode(m){mode=m;document.getElementById('mEco').setAttribute('aria-pressed',m==="eco");document.getElementById('eco').hidden=m!=="eco";
+function setMode(m){mode=m;if(typeof CAM!=='undefined'){camReset();CAM.s=1;CAM.x=CAM.y=0}const zm=document.getElementById('zoom');if(zm)zm.hidden=m==="eco";document.getElementById('mEco').setAttribute('aria-pressed',m==="eco");document.getElementById('eco').hidden=m!=="eco";
   document.getElementById('desk').hidden=m==="eco";document.getElementById('prov').textContent=m==="ocean"?"池內申請年依期末報告到期結構回推（到期＝申請＋20 年，中間年份內插）；高通依合併去重儀表板；H.264 為示意；2027 年後為推演。":m==="eco"?"母數依期末報告；單件 US$10,000 依 TCL v. Ericsson 判決 p.30（Via Licensing）。魚為示意個體。":"模擬個體依簡報統計分布生成，非真實專利清單；匯入家族清單後可換成真實魚群。";
   document.getElementById('mOcean').setAttribute('aria-pressed',m==="ocean");document.getElementById('mVortex').setAttribute('aria-pressed',m==="vortex");document.getElementById('mSaturn').setAttribute('aria-pressed',m==="saturn");
   document.getElementById('mNet').setAttribute('aria-pressed',m==="net");document.getElementById('deskNet').hidden=m!=="net";
@@ -633,12 +654,12 @@ document.getElementById('clearCase').onclick=()=>{caseFish=null;const o=document
 
 /* hover */
 const tip=document.getElementById('tip');
-cv.addEventListener('pointermove',e=>{if(mode==="net"||mode==="eco")return;
-  if(mode==="ocean"){let bb=null,bdd=900;for(const f of OC.fish){if(!f.big||f.alpha<.3)continue;const d=(f.x-e.clientX)**2+(f.y-e.clientY)**2;if(d<bdd){bdd=d;bb=f}}
+cv.addEventListener('pointermove',e=>{if(DRAG.on||mode==="net"||mode==="eco")return;const [WX,WY]=toWorld(e.clientX,e.clientY);const R2=1/(CAM.s*CAM.s);
+  if(mode==="ocean"){let bb=null,bdd=900*R2;for(const f of OC.fish){if(!f.big||f.alpha<.3)continue;const d=(f.x-WX)**2+(f.y-WY)**2;if(d<bdd){bdd=d;bb=f}}
     if(bb){hover=bb;const B=bb.big,dead=ocDead(bb);const pl=B.pool==="hevc"?"HEVC 池 被引用第 "+B.rank+" 名":B.pool==="vvc"?"VVC 池 被引用第 "+B.rank+" 名":"高通 · 撒網 vs 燈塔示範案";
       tip.innerHTML=`<b style="font-family:var(--f-mono)">${esc(B.no)}</b><br>${esc(pl)}<br>權利人：${esc(B.own)}<br>被引用 <b>${B.cites}</b> 次${B.yr?" · 申請 "+esc(B.yr):""}<br>${esc(B.sum)}${B.pool!=="q"?"<br>"+(dead?"已屆 20 年，到期":"仍在有效期"):""}<br><span style="color:var(--dim)">出處：${B.pool==="q"?"Google Patents":"期末報告表 "+(B.pool==="hevc"?"11":"13")}</span>`;
       tip.hidden=false;tip.style.left=Math.min(e.clientX+14,W-290)+'px';tip.style.top=(e.clientY+14)+'px';return}}
-  let best=null,bd=144;for(const f of (mode==="ocean"?OC.fish:fish)){if(f.alpha<.35||(mode==="ocean"&&f.big))continue;const dx=f.x-e.clientX,dy=f.y-e.clientY,d=dx*dx+dy*dy;if(d<bd){bd=d;best=f}}
+  let best=null,bd=144*R2;for(const f of (mode==="ocean"?OC.fish:fish)){if(f.alpha<.35||(mode==="ocean"&&f.big))continue;const dx=f.x-WX,dy=f.y-WY,d=dx*dx+dy*dy;if(d<bd){bd=d;best=f}}
   hover=best;if(!best){tip.hidden=true;return}
   if(mode==="ocean"&&best.who!=="q"){const nm={a:"H.264 池（示意）",s:"Samsung · HEVC 池",o:"其他權利人 · HEVC 池",v:esc(best.vk||"")+" · VVC 池"}[best.who];
     const per=best.who==="v"?"1 條＝4 件":best.who==="a"?"示意個體":"1 條＝8 件";
@@ -657,6 +678,20 @@ cv.addEventListener('pointermove',e=>{if(mode==="net"||mode==="eco")return;
   tip.innerHTML=`<b>${best.ghost?"推演家族（外推）":"關鍵字雜訊"}</b> · ${who}${best.year?" · "+best.year:""}${best.geo?" · "+best.geo:""}<br>${best.arm?esc(best.arm+" "+ARM_SECT[best.arm].label)+"<br>":""}${best.ghost?"外推年份新家族":"被引 "+best.cites+" 次"}${best.star?"<br>"+best.star:""}${role?"<br>"+role:""}`;
   tip.hidden=false;tip.style.left=Math.min(e.clientX+14,W-250)+'px';tip.style.top=(e.clientY+14)+'px'});
 cv.addEventListener('pointerleave',()=>{hover=null;tip.hidden=true});
+const DRAG={on:false,id:null,x:0,y:0,moved:0,pts:new Map(),pinch:0};
+cv.addEventListener('wheel',e=>{e.preventDefault();if(mode==="eco")return;const f=Math.exp(-e.deltaY*(e.ctrlKey?.01:.0015));camZoomAt(e.clientX,e.clientY,f)},{passive:false});
+cv.addEventListener('pointerdown',e=>{DRAG.pts.set(e.pointerId,[e.clientX,e.clientY]);if(DRAG.pts.size===2){const [a,b]=[...DRAG.pts.values()];DRAG.pinch=Math.hypot(a[0]-b[0],a[1]-b[1])}
+  if(mode==="eco"||(CAM.ts<=1.001&&e.pointerType==="mouse"))return;DRAG.on=true;DRAG.x=e.clientX;DRAG.y=e.clientY;DRAG.moved=0;cv.setPointerCapture(e.pointerId);cv.classList.add('grab');hover=null;tip.hidden=true});
+cv.addEventListener('pointermove',e=>{if(!DRAG.pts.has(e.pointerId))return;DRAG.pts.set(e.pointerId,[e.clientX,e.clientY]);
+  if(DRAG.pts.size===2){const [a,b]=[...DRAG.pts.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]);if(DRAG.pinch)camZoomAt((a[0]+b[0])/2,(a[1]+b[1])/2,d/DRAG.pinch);DRAG.pinch=d;return}
+  if(!DRAG.on)return;const dx=e.clientX-DRAG.x,dy=e.clientY-DRAG.y;DRAG.x=e.clientX;DRAG.y=e.clientY;DRAG.moved+=Math.abs(dx)+Math.abs(dy);
+  CAM.tx+=dx;CAM.ty+=dy;camClamp();CAM.x=CAM.tx;CAM.y=CAM.ty});
+const dragEnd=e=>{DRAG.pts.delete(e.pointerId);if(DRAG.pts.size<2)DRAG.pinch=0;if(DRAG.pts.size===0){DRAG.on=false;cv.classList.remove('grab')}};
+cv.addEventListener('pointerup',dragEnd);cv.addEventListener('pointercancel',dragEnd);
+cv.addEventListener('dblclick',e=>{if(mode==="eco")return;if(CAM.ts>1.01)camReset();else camZoomAt(e.clientX,e.clientY,2.5)});
+document.getElementById('zmIn').onclick=()=>camZoomAt(W/2,H/2,1.5);document.getElementById('zmOut').onclick=()=>camZoomAt(W/2,H/2,1/1.5);document.getElementById('zmReset').onclick=camReset;
+addEventListener('keydown',e=>{if(mode==="eco"||e.target.closest('input,textarea,select'))return;if(e.key==="+"||e.key==="=")camZoomAt(W/2,H/2,1.4);else if(e.key==="-"||e.key==="_")camZoomAt(W/2,H/2,1/1.4);else if(e.key==="0")camReset();
+  else if(CAM.ts>1.01&&e.key.startsWith("Arrow")){const st=60;if(e.key==="ArrowLeft")CAM.tx+=st;if(e.key==="ArrowRight")CAM.tx-=st;if(e.key==="ArrowUp")CAM.ty+=st;if(e.key==="ArrowDown")CAM.ty-=st;camClamp();e.preventDefault()}});
 
 /* ======== 撒網 vs 燈塔 ======== */
 const NET={step:0,tt:0,fish:[],bagX:0,bagY:0};
@@ -739,7 +774,7 @@ function netFrame(now){
   const AC=Object.values(ARM_COL);const byc=new Map();grp.blue.forEach(f=>{const c=AC[Math.floor(f.jit*6)];(byc.get(c)||byc.set(c,[]).get(c)).push(f)});
   for(const[c,arr]of byc)paint(arr,c,.55,2.6);
   paint(grp.B,COL.B,.6,2.6);paint(grp.A,COL.A,.6,2.6);paint(grp.AB,COL.gold,st===3?.95:.75,st===3?3.4:2.9);
-  ctx.globalCompositeOperation="source-over";ctx=MAIN;ctx.globalCompositeOperation="lighter";ctx.drawImage(trail,0,0,W,H);ctx.globalCompositeOperation="source-over";
+  ctx.globalCompositeOperation="source-over";ctx=MAIN;ctx.globalCompositeOperation="lighter";ctx.save();ctx.setTransform(DPR,0,0,DPR,0,0);ctx.drawImage(trail,0,0,W,H);ctx.restore();ctx.globalCompositeOperation="source-over";
   // net
   if(st<2){const nx=haul>0?NET.bagX-netW*.5:front-netW,ny=haul>0?NET.bagY-(netBot-netTop)*(.5-haul*.25):netTop,nh=(netBot-netTop)*(1-haul*.5),nw=netW*(1-haul*.4);
     ctx.strokeStyle=st===0?"rgba(220,230,236,.35)":"rgba(127,224,208,.55)";ctx.lineWidth=1;const mesh=st===0?26:12;
@@ -994,7 +1029,7 @@ function ocFrame(t,now){
     arr.forEach(f=>fishPath(f,sm*(f.who==="o"||f.who==="a"?2.2:(1.8+Math.min(Math.log10(f.cites+1),2.9)*.7))));
     if(col==="G"){ctx.strokeStyle=COL.gold;ctx.lineWidth=1;ctx.stroke()}else{ctx.fillStyle=col;ctx.fill()}}
   ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";ctx=MAIN;
-  ctx.globalCompositeOperation="lighter";ctx.drawImage(trail,0,0,W,H);ctx.globalCompositeOperation="source-over";
+  ctx.globalCompositeOperation="lighter";ctx.save();ctx.setTransform(DPR,0,0,DPR,0,0);ctx.drawImage(trail,0,0,W,H);ctx.restore();ctx.globalCompositeOperation="source-over";
   ctx.globalAlpha=.45;ctx.fillStyle="#56697a";ctx.beginPath();for(const f of OC.fish)if(f.died&&!f.big&&f.alpha>.03)fishPath(f,1.9);ctx.fill();ctx.globalAlpha=1;
   // 名魚：報告中被引用前 10 名（大魚、金邊；到期後變灰但仍保留大小）
   for(const f of OC.fish){if(!f.big||f.alpha<.05)continue;const B=f.big,dead=f.died;
@@ -1106,7 +1141,7 @@ function ecoFrame(t,dt){
       put(f.cls==="TP"?"#4dff9a":f.cls==="FP"?"#ff4f6d":f.cls==="FN"?"#5b5030":"#2f4150",f)}
     else put(f.gold?"#3ddcff":"#7c6bff",f)}
   for(const[c,arr]of grp){ctx.fillStyle=c;ctx.globalAlpha=.9;ctx.beginPath();arr.forEach(f=>fishPath(f,2.5));ctx.fill()}
-  ctx.globalAlpha=1;ctx=MAIN;ctx.globalCompositeOperation="lighter";ctx.drawImage(trail,0,0,W,H);ctx.globalCompositeOperation="source-over";
+  ctx.globalAlpha=1;ctx=MAIN;ctx.globalCompositeOperation="lighter";ctx.save();ctx.setTransform(DPR,0,0,DPR,0,0);ctx.drawImage(trail,0,0,W,H);ctx.restore();ctx.globalCompositeOperation="source-over";
   if(st===2){ctx.strokeStyle="rgba(255,209,102,.8)";ctx.lineWidth=1;ctx.beginPath();for(const f of ECO.fish)if(f.cls==="FN"&&f.jit<ECO.p2){ctx.moveTo(f.x+5,f.y);ctx.arc(f.x,f.y,5,0,6.283)}ctx.stroke()}
   if(st===0&&ECO.insp){const I=ECO.insp;const lg=ctx.createRadialGradient(I.x,I.y,0,I.x,I.y,40);lg.addColorStop(0,"rgba(255,230,160,.55)");lg.addColorStop(1,"rgba(255,230,160,0)");ctx.fillStyle=lg;ctx.beginPath();ctx.arc(I.x,I.y,40,0,6.283);ctx.fill();
     ctx.font="700 12px 'Noto Sans TC',sans-serif";ctx.fillStyle="#ffe6a0";ctx.textAlign="center";ctx.fillText("專家",I.x,I.y-22);
@@ -1128,6 +1163,5 @@ addEventListener('resize',resize);resize();setColorBy('arm');setMode('ocean');se
 fish.forEach(f=>{const p=target(f,0);f.x=p[0]+(rnd()-.5)*40;f.y=p[1]+(rnd()-.5)*40});
 requestAnimationFrame(frame);
 </script>
-
 </body>
 </html>

@@ -513,6 +513,31 @@ function cosmosBuild(){const c=COS.cv,pad=60;c.width=(W+pad*2)*DPR;c.height=(H+p
   // 環面塵埃
   COS.dust=[];for(let i=0;i<900;i++)COS.dust.push({k:1.25+Math.pow(Math.random(),.8)*1.6,a:Math.random()*6.283,sp:R(.6,1.2),s:R(.4,1.1),o:R(.15,.55)});
   COS.w=W;COS.h=H;COS.pad=pad}
+/* ======== 土星錨點旁的銀河系：預先畫一張旋臂星系貼圖，每幀只做傾斜＋緩慢自轉 ======== */
+const GAL={cv:null,S:640};
+function galBuild(){const S=GAL.S,c=document.createElement('canvas');c.width=c.height=S;const g=c.getContext('2d'),C=S/2;let sd=11;const R=()=>{sd=(sd*16807)%2147483647;return sd/2147483647};
+  g.globalCompositeOperation="lighter";
+  // 外圍暈光
+  let gr=g.createRadialGradient(C,C,0,C,C,C);gr.addColorStop(0,"rgba(255,226,180,.75)");gr.addColorStop(.15,"rgba(255,200,150,.3)");gr.addColorStop(.5,"rgba(120,140,255,.1)");gr.addColorStop(1,"rgba(80,100,200,0)");g.fillStyle=gr;g.fillRect(0,0,S,S);
+  // 旋臂的柔光帶（多層寬筆刷疊出星雲感）
+  g.lineCap="round";for(let arm=0;arm<2;arm++)for(const [w,col]of[[.26,"rgba(90,120,255,.05)"],[.16,"rgba(130,160,255,.07)"],[.08,"rgba(200,215,255,.09)"],[.035,"rgba(255,235,220,.1)"]]){g.lineWidth=C*w;g.strokeStyle=col;g.beginPath();
+    for(let k=0;k<=90;k++){const r=C*(.07+.83*k/90),th=arm*Math.PI+Math.log(r/(C*.06))*2.1,x=C+Math.cos(th)*r,y=C+Math.sin(th)*r;k?g.lineTo(x,y):g.moveTo(x,y)}g.stroke()}
+  // 兩條對數螺旋臂：星點＋藍色年輕星團＋粉紅星雲結
+  for(let arm=0;arm<2;arm++)for(let i=0;i<8000;i++){const u=Math.pow(R(),.75),r=C*(.06+.9*u),th=arm*Math.PI+Math.log(r/(C*.06))*2.1+(R()-.5)*(.55-.3*u),
+      sc=(R()-.5)*C*.09*(1-u*.4),x=C+Math.cos(th)*r+Math.cos(th+1.57)*sc,y=C+Math.sin(th)*r+Math.sin(th+1.57)*sc,k=R();
+    g.globalAlpha=(.25+.6*R())*(1-u*.55);g.fillStyle=k<.12?"#9fc3ff":k<.16?"#ff9ec8":u<.25?"#ffe2b8":"#dfe6ff";const z=k<.16?1.6+R()*1.4:.6+R()*1.1;g.fillRect(x,y,z,z)}
+  // 旋臂間的散星
+  for(let i=0;i<2600;i++){const a=R()*6.283,r=C*Math.pow(R(),.6)*.95;g.globalAlpha=.12+.25*R();g.fillStyle="#cdd6ff";g.fillRect(C+Math.cos(a)*r,C+Math.sin(a)*r,.8,.8)}
+  // 塵埃帶（暗紋）
+  g.globalCompositeOperation="source-over";g.globalAlpha=1;g.strokeStyle="rgba(4,6,14,.35)";g.lineCap="round";
+  for(let arm=0;arm<2;arm++){g.lineWidth=C*.035;g.beginPath();for(let k=0;k<=80;k++){const r=C*(.1+.75*k/80),th=arm*Math.PI+Math.log(r/(C*.06))*2.1-.22,x=C+Math.cos(th)*r,y=C+Math.sin(th)*r;k?g.lineTo(x,y):g.moveTo(x,y)}g.stroke()}
+  // 明亮核心
+  g.globalCompositeOperation="lighter";gr=g.createRadialGradient(C,C,0,C,C,C*.32);gr.addColorStop(0,"rgba(255,252,240,1)");gr.addColorStop(.18,"rgba(255,226,170,.75)");gr.addColorStop(.55,"rgba(255,200,140,.18)");gr.addColorStop(1,"rgba(255,200,140,0)");g.fillStyle=gr;g.beginPath();g.arc(C,C,C*.32,0,6.283);g.fill();
+  GAL.cv=c}
+function drawGalaxy(t,dx,dy){if(!GAL.cv)galBuild();const narrow=W<860,r=Math.min(W,H)*(narrow?.2:.24),
+    gx=narrow?W*.78:Math.min(W-r*1.05,Math.max(SAT.x+SAT.R*2.5+r*.8,W*.8)),gy=narrow?H*.78:H*.5;
+  ctx.save();ctx.translate(gx+dx*.8,gy+dy*.8);ctx.rotate(-.45);ctx.scale(1,.5);ctx.rotate(t*.000035);ctx.globalCompositeOperation="lighter";ctx.globalAlpha=.95;
+  ctx.drawImage(GAL.cv,-r,-r,r*2,r*2);ctx.restore()}
 function drawCosmos(t,now){if(COS.w!==W||COS.h!==H)cosmosBuild();const pad=COS.pad;
   // 緩慢視差漂移：像鏡頭在太空中呼吸
   const dx=Math.sin(t*.000045)*pad*.6,dy=Math.cos(t*.00003)*pad*.4;ctx.drawImage(COS.cv,-pad+dx,-pad+dy,W+pad*2,H+pad*2);
@@ -520,6 +545,7 @@ function drawCosmos(t,now){if(COS.w!==W||COS.h!==H)cosmosBuild();const pad=COS.p
     ctx.globalAlpha=a*.85;ctx.fillStyle="#eef4ff";ctx.beginPath();ctx.arc(x,y,r*.7,0,6.283);ctx.fill();
     ctx.globalAlpha=a*.35;ctx.fillRect(x-r*4,y-.4,r*8,.8);ctx.fillRect(x-.4,y-r*4,.8,r*8)}
   ctx.globalAlpha=1;
+  drawGalaxy(t,dx,dy);
   // 流星（約每 6–9 秒一顆）
   if(!COS.met&&now>COS.nextMet){const a=.5+Math.random()*.35;COS.met={x:Math.random()*W*.8,y:Math.random()*H*.35,a,t0:now,len:120+Math.random()*120}}
   if(COS.met){const m=COS.met,k=(now-m.t0)/900;if(k>1){COS.met=null;COS.nextMet=now+6000+Math.random()*3000}else{

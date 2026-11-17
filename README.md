@@ -9,11 +9,18 @@ HEVC / VVC 標準必要專利（SEP）必要性檢測工具，以 8 維度向量
 | 分頁 | 網址 | 實際檔案 | 用途 |
 |---|---|---|---|
 | 必要性檢測工具 | `…/sep-detector/#tool` | `tool.html` | 單項檢測、批量模式、驗證資料庫 |
-| 高通清單 | `…/sep-detector/#qcom` | `demo/ocean.html` | 魚群動畫：四大洋全景、權利人漩渦、土星錨點、撒網 vs 燈塔、經濟效益 |
+| 高通清單 | `…/sep-detector/#qcom` | `demo/ocean.html`（＋`demo/css`、`demo/js`、`demo/data`） | 魚群動畫：四大洋全景、權利人漩渦、土星錨點、撒網 vs 燈塔、經濟效益 |
 
 - 分頁列右側「全螢幕」讓目前分頁全螢幕；「單獨開啟」不帶分頁列開啟該頁。
 - 高通清單分頁第一次點開才載入；切走時動畫自動暫停。
 - 工具頁首的「🐟 高通清單」與 Demo 的「← 回檢測工具」會切換分頁。
+
+## 維護
+
+改程式前先讀 [`AGENTS.md`](AGENTS.md)：檔案分工、改什麼讀哪個檔、不可更動的內容、寫法規則、檢查與推送方式。
+
+- 換高通清單：`python3 tools/build_qrec.py 清單.xlsx`
+- 改完檢查：`node tools/check.js`
 
 ## 線上展示（GitHub Pages）
 

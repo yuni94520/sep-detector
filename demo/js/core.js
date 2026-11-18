@@ -125,15 +125,22 @@ function step(t){
 /* ======== draw ======== */
 
 function fishPath(f,s){
-  if(LQ){const a=Math.atan2(f.vy,f.vx)||0,c=Math.cos(a),sn=Math.sin(a),x=f.x,y=f.y,h=s*1.75,b=s*1.9,w=s*.62;
-    ctx.moveTo(x+h*c,y+h*sn);ctx.lineTo(x-b*c+w*sn,y-b*sn-w*c);ctx.lineTo(x-b*c-w*sn,y-b*sn+w*c);ctx.closePath();return}
-  const ang=Math.atan2(f.vy,f.vx)||0,c=Math.cos(ang),sn=Math.sin(ang);const wag=Math.sin(f.ph*.9)*s*.5;
-  const P=(x,y)=>[f.x+x*c-y*sn,f.y+x*sn+y*c];
-  // 流線型仿生魚身：頭圓、腹收、尾鰭隨擺動（二次貝茲）
-  const n=P(s*1.75,0),u1=P(s*.9,-s*.62),u2=P(-s*.55,-s*.5),k=P(-s*1.05,wag*.35),l2=P(-s*.55,s*.5),l1=P(s*.9,s*.62),
-    t1=P(-s*1.95,-s*.78+wag),t2=P(-s*1.95,s*.78+wag),tc=P(-s*1.55,wag*.7);
-  ctx.moveTo(n[0],n[1]);ctx.quadraticCurveTo(u1[0],u1[1],u2[0],u2[1]);ctx.quadraticCurveTo(k[0],k[1],t1[0],t1[1]);
-  ctx.quadraticCurveTo(tc[0],tc[1],t2[0],t2[1]);ctx.quadraticCurveTo(k[0],k[1],l2[0],l2[1]);ctx.quadraticCurveTo(l1[0],l1[1],n[0],n[1]);ctx.closePath()}
+  const X=f.x,Y=f.y,ang=Math.atan2(f.vy,f.vx)||0,c=Math.cos(ang),sn=Math.sin(ang);
+  if(LQ){const h=s*1.75,b=s*1.9,w=s*.62;
+    ctx.moveTo(X+h*c,Y+h*sn);ctx.lineTo(X-b*c+w*sn,Y-b*sn-w*c);ctx.lineTo(X-b*c-w*sn,Y-b*sn+w*c);ctx.closePath();return}
+  const wag=Math.sin(f.ph*.9)*s*.5;
+  /* 流線型仿生魚身：頭圓、腹收、尾鰭隨擺動（二次貝茲）。座標內嵌計算，不配置陣列（每幀數千條魚） */
+  let x=s*1.75,y=0;const nx=X+x*c-y*sn,ny=Y+x*sn+y*c;
+  x=s*.9;y=-s*.62;const u1x=X+x*c-y*sn,u1y=Y+x*sn+y*c;
+  x=-s*.55;y=-s*.5;const u2x=X+x*c-y*sn,u2y=Y+x*sn+y*c;
+  x=-s*1.05;y=wag*.35;const kx=X+x*c-y*sn,ky=Y+x*sn+y*c;
+  x=-s*.55;y=s*.5;const l2x=X+x*c-y*sn,l2y=Y+x*sn+y*c;
+  x=s*.9;y=s*.62;const l1x=X+x*c-y*sn,l1y=Y+x*sn+y*c;
+  x=-s*1.95;y=-s*.78+wag;const t1x=X+x*c-y*sn,t1y=Y+x*sn+y*c;
+  x=-s*1.95;y=s*.78+wag;const t2x=X+x*c-y*sn,t2y=Y+x*sn+y*c;
+  x=-s*1.55;y=wag*.7;const tcx=X+x*c-y*sn,tcy=Y+x*sn+y*c;
+  ctx.moveTo(nx,ny);ctx.quadraticCurveTo(u1x,u1y,u2x,u2y);ctx.quadraticCurveTo(kx,ky,t1x,t1y);
+  ctx.quadraticCurveTo(tcx,tcy,t2x,t2y);ctx.quadraticCurveTo(kx,ky,l2x,l2y);ctx.quadraticCurveTo(l1x,l1y,nx,ny);ctx.closePath()}
 const qCol=f=>COLORBY==='geo'?(GEO_COL[f.geo]||COL.q):COLORBY==='cite'?CITE_COL(f.cites):(ARM_COL[f.arm]||COL.q);
 const sizeOf=f=>f.who==="o"?2.1:(1.7+Math.min(Math.log10(f.cites+1),2.9)*.75);
 function colorOf(f){
@@ -141,13 +148,19 @@ function colorOf(f){
   if(f.who==="q"){if(mode==="saturn"){if(phase>=4&&f.multi)return COL.gold;if(f.role!=="core")return f.role==="A"?COL.A:COL.B}return qCol(f)}
   if(f.who==="s")return S_COLS[Math.floor(f.jit*S_COLS.length)];
   return O_COLS[Math.floor(f.jit*O_COLS.length)]}
+/* 批次：同色同透明度的魚合成一條路徑一次填色（相當於 Blender 的 instancing）。
+   鍵用整數（色票編號×4096＋虛線旗標＋透明度級距），不組字串；鏡頭拉近時略過視野外的魚（只省繪製，不影響位置運算） */
+const _CID=new Map(),_CLS=[],_POOL=[];
+function colorId(c){let i=_CID.get(c);if(i===undefined){i=_CLS.length;_CID.set(c,i);_CLS.push(c)}return i}
 function drawBatch(list,alphaMul){
-  const groups=new Map();
-  for(const f of list){if(f.alpha<.02)continue;const key=colorOf(f)+'|'+(f.ghost?'g':'')+'|'+Math.round(f.alpha*alphaMul*(f.jit<.4?3.5:5));
-    (groups.get(key)||groups.set(key,[]).get(key)).push(f)}
-  for(const[key,arr]of groups){const[col,g,a]=key.split('|');ctx.globalAlpha=Math.min(1,a/5);
-    ctx.beginPath();arr.forEach(f=>fishPath(f,sizeOf(f)));
-    if(g){ctx.setLineDash([2,2]);ctx.strokeStyle=COL.gold;ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([])}else{ctx.fillStyle=col;ctx.fill()}}
+  const groups=new Map(),zoomed=CAM.s>1.001,x0=-CAM.x/CAM.s-16,x1=(W-CAM.x)/CAM.s+16,y0=-CAM.y/CAM.s-16,y1=(H-CAM.y)/CAM.s+16;
+  for(const f of list){if(f.alpha<.02)continue;if(zoomed&&(f.x<x0||f.x>x1||f.y<y0||f.y>y1))continue;
+    const key=colorId(colorOf(f))*4096+(f.ghost?2048:0)+Math.round(f.alpha*alphaMul*(f.jit<.4?3.5:5));
+    let g=groups.get(key);if(!g){g=_POOL.pop()||[];groups.set(key,g)}g.push(f)}
+  for(const[key,arr]of groups){const a=key&2047,gh=key&2048,col=_CLS[key>>12];ctx.globalAlpha=Math.min(1,a/5);
+    ctx.beginPath();for(let i=0;i<arr.length;i++){const f=arr[i];fishPath(f,sizeOf(f))}
+    if(gh){ctx.setLineDash([2,2]);ctx.strokeStyle=COL.gold;ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([])}else{ctx.fillStyle=col;ctx.fill()}
+    arr.length=0;_POOL.push(arr)}
   ctx.globalAlpha=1}
 const VWAVES=[];
 function drawVortexWaves(t){
